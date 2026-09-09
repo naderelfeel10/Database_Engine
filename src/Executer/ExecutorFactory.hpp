@@ -21,17 +21,22 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Q_Execution\update_statement_executer.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Q_Execution\delete_statement_executer.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Q_Execution\create_table_executer.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\TransactionManager\Transaction_manager.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\sql\SQLStatement.h"
 
 //in this executer i will use it to convert from BoundedStmts into actual component i use, then call it's operator
 class ExecutorFactory{
 private:
     Catalog* catalog;
     BindContext* context;
+    TransactionManager* txn_manager;
 
 public:
 
-    ExecutorFactory(Catalog* catalog, BindContext* context):catalog(catalog), context(context){}
+    ExecutorFactory(TransactionManager* txn_manager, Catalog* catalog, BindContext* context):txn_manager(txn_manager),catalog(catalog), context(context){}
     AbstractExecuter* createExecutor(AbstractPlanNode* plan);
+
+    bool execute_txn(const hsql::SQLStatement* stmt);
     
     AbstractPredicate* build_predicate(BoundExpression* expression, AbstractExecuter* child);
     AbstractPredicate* build_join_predicate(BoundExpression* expression, AbstractExecuter* left_child, AbstractExecuter* right_child);

@@ -17,7 +17,22 @@ bool DeleteTuple::has_column(string col_name){return false;};
 
 bool DeleteTuple::delete_tuple(RID rid){
 
-    this->deleted =  this->table_heap->deleteTupleBool(rid);    
+    Tuple* old_tuple = this->table_heap->getTuple(rid);
+
+    this->deleted =  this->table_heap->deleteTupleBool(rid);
+
+    Transaction* txn = txn_manager->get_current_transaction();
+    if (txn != nullptr) {
+        //prepare record to insert into curr_txn
+        WriteRecord record{
+            WriteType::DELETE,
+            table_heap,
+            rid,
+            *old_tuple
+        };
+
+        txn->add_write(record);
+    }
     return deleted;
 
 }

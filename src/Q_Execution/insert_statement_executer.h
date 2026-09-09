@@ -12,17 +12,19 @@
 #include"./ComplexPredicate.h"
 #include"./seq_scan_operator.h"
 #include"AbstractPredicate.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\TransactionManager\Transaction_manager.h"
 
 using namespace std;
 
 class InsertTuple : public AbstractExecuter{
     private:
         TableHeap* table_heap;
+        TransactionManager* txn_manager;
         Tuple tuple = Tuple({});
         bool inserted{false};
 
     public:
-        InsertTuple(TableHeap* table_heap,Tuple tuple);
+        InsertTuple(TransactionManager* txn_manager, TableHeap* table_heap,Tuple tuple);
         bool is_inserted();
         void open(){};
         void close(){};

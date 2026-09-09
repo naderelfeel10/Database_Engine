@@ -12,18 +12,21 @@
 #include"./ComplexPredicate.h"
 #include"./seq_scan_operator.h"
 #include"AbstractPredicate.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\TransactionManager\Transaction_manager.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\TransactionManager\Transaction.h"
 
 using namespace std;
 
 class UpdateTuple : public AbstractExecuter{
     private:
         TableHeap* table_heap;
+        TransactionManager* txn_manager;
         Tuple tuple = Tuple({});
         bool updated{false};
 
     public:
 
-        UpdateTuple(TableHeap* table_heap):table_heap(table_heap){}
+        UpdateTuple(TransactionManager* txn_manager, TableHeap* table_heap):table_heap(table_heap),txn_manager(txn_manager){}
         bool is_updated();
         void open(){};
         void close(){};

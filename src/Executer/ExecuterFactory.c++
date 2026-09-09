@@ -181,7 +181,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             return new SortAggregateExecuter(this->catalog->getBPM(),child, grouping_cols, grouping_functions,having_predicate);
 
         }
-        //////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////  
         case PlanType::INSERT:{
 
             auto* insert_plan = static_cast<InsertPlan*>(plan);
@@ -225,9 +225,8 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             }
             Tuple tuple = Tuple(to_insert_cols);
             tuple.print();
-            return new InsertTuple(table_heap, tuple);
+            return new InsertTuple(txn_manager, table_heap, tuple);
         }
-
         /*
             BoundTable* table;
             vector<Column> columns;
@@ -265,7 +264,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             //for every tuple to update, we have only some cols to update
             // so the original cols should remain the same non-changed
             Tuple dummy_tuple({});
-            AbstractExecuter* update_tuple_executer = new UpdateTuple(table_heap);
+            AbstractExecuter* update_tuple_executer = new UpdateTuple(txn_manager, table_heap);
 
             //for(auto&rid:seq_scan->get_table_rids())rid.print();
 
@@ -317,6 +316,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             
 
         }
+
         case PlanType::DELETE:{
             auto* delete_plan = static_cast<DeletePlan*>(plan);
             
@@ -344,7 +344,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
                 select_executer = new Select(seq_scan, predicate);
             }
             Tuple dummy_tuple({});
-            AbstractExecuter* delete_tuple_executer = new DeleteTuple(table_heap);
+            AbstractExecuter* delete_tuple_executer = new DeleteTuple(txn_manager, table_heap);
 
             if(select_executer){
             
@@ -374,6 +374,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             //return just null for now
             return create_table_executer;
         }
+        
         default:{
             throw runtime_error("invalid planType");
             return nullptr;
@@ -706,6 +707,35 @@ Column* ExecutorFactory::const_to_col(BoundConstantExpression* expr){
         }
 }
 
+bool ExecutorFactory::execute_txn(const hsql::SQLStatement* stmt){
+
+    Transaction* curr_txn = this->txn_manager->get_current_transaction();
+    
+    if(stmt->type() == hsql::kStmtTransaction){
+        auto* txn_stmt = static_cast<const hsql::TransactionStatement*>(stmt);
+
+        switch(txn_stmt->command){
+
+            case hsql::kBeginTransaction:
+                cout<<"txn begining"<<endl;
+                txn_manager->begin();
+                return true;
+
+            case hsql::kCommitTransaction:
+                cout<<"txn commiting"<<endl;
+                txn_manager->commit(curr_txn);
+                return true;
+
+            case hsql::kRollbackTransaction:
+                cout<<"txn rolling back"<<endl;
+                txn_manager->abort(curr_txn);
+                return true;
+        }
+
+        return false;
+    }
+}
+
 /// dummy insertions
 void InsertIntoUserTable(TableHeap* user_table){
     for(int i = 0; i < 70; i++){
@@ -1013,6 +1043,10 @@ string sql;
 
 //string sql = "CREATE TABLE students (name TEXT, student_number INTEGER NOT NULL, city TEXT, grade DOUBLE PRIMARY KEY UNIQUE);";
 //string sql = "insert into students (name, student_number, city, grade) values ('nader', 1, 'cairo', 3.12);";
+BindContext* context = new BindContext();
+TransactionManager* txn_manager = new TransactionManager();
+ExecutorFactory factory(txn_manager, catalog, context);
+
 while (true) {
 
     cout << "\nELFEEL_DB> ";
@@ -1048,11 +1082,19 @@ while (true) {
         // 2. Bind
         // ============================================================
 
-        BindContext* context = new BindContext();
+
+
 
         Binder* binder = new Binder(catalog, context);
 
         const hsql::SQLStatement* stmt = result.getStatement(0);
+
+        if(stmt->type() == hsql::kStmtTransaction){
+            bool is_txn = factory.execute_txn(stmt);
+            if(is_txn){
+                continue;
+            }
+        }
 
         unique_ptr<BoundStatement> bound_stmt =
             binder->bind(stmt);
@@ -1102,7 +1144,6 @@ while (true) {
         // 5. Create Executor
         // ============================================================
 
-        ExecutorFactory factory(catalog, context);
 
         //AbstractExecuter* executor = factory.createExecutor(plan);
 
