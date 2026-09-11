@@ -23,6 +23,7 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Q_Execution\create_table_executer.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\TransactionManager\Transaction_manager.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\sql\SQLStatement.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Recovery\WAL_manager.h"
 
 //in this executer i will use it to convert from BoundedStmts into actual component i use, then call it's operator
 class ExecutorFactory{
@@ -30,10 +31,18 @@ private:
     Catalog* catalog;
     BindContext* context;
     TransactionManager* txn_manager;
+    WALManager* wal_manager;
 
 public:
 
-    ExecutorFactory(TransactionManager* txn_manager, Catalog* catalog, BindContext* context):txn_manager(txn_manager),catalog(catalog), context(context){}
+    ExecutorFactory(TransactionManager* txn_manager, Catalog* catalog, BindContext* context, WALManager* wal_manager):txn_manager(txn_manager),
+    catalog(catalog), context(context){
+        this->wal_manager = wal_manager;
+        cout << "wal_manager = " << wal_manager << endl;
+        cout << "wal_manager = " << this->wal_manager << endl;
+
+    }
+
     AbstractExecuter* createExecutor(AbstractPlanNode* plan);
 
     bool execute_txn(const hsql::SQLStatement* stmt);

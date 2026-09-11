@@ -14,6 +14,7 @@
 #include"AbstractPredicate.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\TransactionManager\Transaction_manager.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\TransactionManager\Transaction.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Recovery\WAL_manager.h"
 
 using namespace std;
 
@@ -21,12 +22,16 @@ class UpdateTuple : public AbstractExecuter{
     private:
         TableHeap* table_heap;
         TransactionManager* txn_manager;
+        WALManager* wal_manager;
         Tuple tuple = Tuple({});
         bool updated{false};
 
     public:
 
-        UpdateTuple(TransactionManager* txn_manager, TableHeap* table_heap):table_heap(table_heap),txn_manager(txn_manager){}
+        UpdateTuple(WALManager* wal_manager, TransactionManager* txn_manager, TableHeap* table_heap):
+        table_heap(table_heap),txn_manager(txn_manager),wal_manager(wal_manager){
+            this->wal_manager->set_table_heap(this->table_heap);
+        }
         bool is_updated();
         void open(){};
         void close(){};

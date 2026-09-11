@@ -197,8 +197,16 @@ vector<RID> TableHeap::updateTuple(vector<RID> rids, Tuple tuple){
 
 void TableHeap::deleteTuple(RID rid){
 
+    std::cout << "BPM = " << BPM << std::endl;
+    std::cout << "page_id = " << rid.getPageId() << std::endl;
+    std::cout << "slot_id = " << rid.getSlotNum() << std::endl;
+
     // select the targted page from the buffer
     char* page_buffer = BPM->fetchPage(rid.getPageId());
+    if (page_buffer == nullptr) {
+        cout << "ERROR: fetchPage returned nullptr for page "<< rid.getPageId() << std::endl;
+        return;
+    }
     Page* page = reinterpret_cast<Page*>(page_buffer);
 
     // just delete the selected slot num

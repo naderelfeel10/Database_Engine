@@ -3,10 +3,17 @@
 using namespace std;
 
 
-InsertTuple::InsertTuple(TransactionManager* txn_manager, TableHeap* table_heap,Tuple tuple){
+InsertTuple::InsertTuple(WALManager* wal_manager, TransactionManager* txn_manager, TableHeap* table_heap,Tuple tuple){
     this->tuple = tuple;
     this->table_heap = table_heap;
     this->txn_manager = txn_manager;
+    this->wal_manager = wal_manager;
+
+    cout << "wal_manager = " << wal_manager << endl;
+    cout << "table_heap  = " << table_heap << endl;
+
+    if(this->wal_manager)
+        this->wal_manager->set_table_heap(table_heap);
 
 
     RID rid = this->table_heap->insertTuple(tuple);  
@@ -29,6 +36,12 @@ InsertTuple::InsertTuple(TransactionManager* txn_manager, TableHeap* table_heap,
 
         txn->add_write(record);
     }
+    //insert this into WAL 
+    int txn_id = txn->GetTransactionId();
+    string table_name = table_heap->getTableName();
+    WALRecord record(LogType::INSERT, txn_id, table_name, rid, Tuple({}), tuple);
+    record.new_tuple.print();
+    this->wal_manager->add_record(record);
 }
 
 

@@ -53,6 +53,17 @@ bool UpdateTuple::update_tuple(RID rid, Tuple tuple){
 
         txn->add_write(record);
     }
+
+    //insert this into WAL 
+    int txn_id = txn->GetTransactionId();
+    string table_name = table_heap->getTableName();
+
+    WALRecord record(LogType::UPDATE, txn_id, table_name, rid, *old_tuple, tuple);
+    
+    record.old_tuple.print();
+    record.new_tuple.print();    
+    this->wal_manager->add_record(record);
+
     return updated;
 
 }

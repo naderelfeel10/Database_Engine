@@ -115,11 +115,11 @@ bool Page::getTuple(int slot_num, Tuple& tuple){
     tuple.deserialize(data+ offset);
 
     if(tuple.get_is_deleted()){
-        cout<<"tuple is deleted!"<<endl;
+        //cout<<"tuple is deleted!"<<endl;
         return false;
     }
     if(slots[slot_num].id_deleted == true){
-        cout<<"tuple deleted!"<<endl;
+        //cout<<"tuple deleted!"<<endl;
         return false;
     }
         

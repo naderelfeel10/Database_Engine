@@ -225,7 +225,9 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             }
             Tuple tuple = Tuple(to_insert_cols);
             tuple.print();
-            return new InsertTuple(txn_manager, table_heap, tuple);
+            cout<<"wall manager"<<wal_manager<<endl;
+            cout<<"wall manager"<<this->wal_manager<<endl;
+            return new InsertTuple(wal_manager, txn_manager, table_heap, tuple);
         }
         /*
             BoundTable* table;
@@ -264,7 +266,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             //for every tuple to update, we have only some cols to update
             // so the original cols should remain the same non-changed
             Tuple dummy_tuple({});
-            AbstractExecuter* update_tuple_executer = new UpdateTuple(txn_manager, table_heap);
+            AbstractExecuter* update_tuple_executer = new UpdateTuple(wal_manager, txn_manager, table_heap);
 
             //for(auto&rid:seq_scan->get_table_rids())rid.print();
 
@@ -344,7 +346,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
                 select_executer = new Select(seq_scan, predicate);
             }
             Tuple dummy_tuple({});
-            AbstractExecuter* delete_tuple_executer = new DeleteTuple(txn_manager, table_heap);
+            AbstractExecuter* delete_tuple_executer = new DeleteTuple(wal_manager, txn_manager, table_heap);
 
             if(select_executer){
             
@@ -716,19 +718,33 @@ bool ExecutorFactory::execute_txn(const hsql::SQLStatement* stmt){
 
         switch(txn_stmt->command){
 
-            case hsql::kBeginTransaction:
+            case hsql::kBeginTransaction:{
                 cout<<"txn begining"<<endl;
-                txn_manager->begin();
-                return true;
+                curr_txn = txn_manager->begin();
+                int txn_id = curr_txn->GetTransactionId();
 
-            case hsql::kCommitTransaction:
+                WALRecord record{LogType::BEGIN, txn_id, "DUMMY_TABLE", RID(-1, -1), Tuple({}), Tuple({})};
+                this->wal_manager->add_record(record);
+                return true;
+            }
+
+            case hsql::kCommitTransaction:{
                 cout<<"txn commiting"<<endl;
                 txn_manager->commit(curr_txn);
+                int txn_id = curr_txn->GetTransactionId();
+
+                WALRecord record{LogType::COMMIT, txn_id, "DUMMY_TABLE", RID(-1, -1), Tuple({}), Tuple({})};
+                this->wal_manager->add_record(record);
                 return true;
+            }
 
             case hsql::kRollbackTransaction:
                 cout<<"txn rolling back"<<endl;
                 txn_manager->abort(curr_txn);
+                int txn_id = curr_txn->GetTransactionId();
+
+                WALRecord record{LogType::ABORT, txn_id, "DUMMY_TABLE", RID(-1, -1), Tuple({}), Tuple({})};
+                this->wal_manager->add_record(record);
                 return true;
         }
 
@@ -886,6 +902,7 @@ main(){
 */
 
 //main rewrite
+
 int main()
 {
     DiskManager* dm = new DiskManager("catalog.db");
@@ -1038,6 +1055,9 @@ int main()
     cout<<"=============================\n";
 
     */
+
+
+
 string sql;
 //string sql = "CREATE TABLE students (name TEXT, student_number INTEGER, city TEXT, grade DOUBLE);";
 
@@ -1045,8 +1065,13 @@ string sql;
 //string sql = "insert into students (name, student_number, city, grade) values ('nader', 1, 'cairo', 3.12);";
 BindContext* context = new BindContext();
 TransactionManager* txn_manager = new TransactionManager();
-ExecutorFactory factory(txn_manager, catalog, context);
 
+const char* table_name = "wal.bin";
+WALRecovery* recovery_manager = new WALRecovery(table_name);
+WALManager* wal_manager = new WALManager(catalog, recovery_manager,nullptr,table_name);
+wal_manager->recover();
+ExecutorFactory factory(txn_manager, catalog, context, wal_manager);
+Transaction* curr_txn = txn_manager->get_current_transaction();
 while (true) {
 
     cout << "\nELFEEL_DB> ";
@@ -1091,9 +1116,16 @@ while (true) {
 
         if(stmt->type() == hsql::kStmtTransaction){
             bool is_txn = factory.execute_txn(stmt);
+            curr_txn = txn_manager->get_current_transaction();
             if(is_txn){
                 continue;
             }
+        }else if(curr_txn==nullptr){
+            txn_manager->begin();
+            curr_txn = txn_manager->get_current_transaction();
+            int txn_id = curr_txn->GetTransactionId();
+            WALRecord record{LogType::BEGIN, txn_id, "DUMMY_TABLE", RID(-1, -1), Tuple({}), Tuple({})};
+            wal_manager->add_record(record);
         }
 
         unique_ptr<BoundStatement> bound_stmt =
@@ -1279,6 +1311,16 @@ while (true) {
         }
 
 
+        if(stmt->type() != hsql::kStmtTransaction){
+            if(curr_txn==nullptr){
+            
+                curr_txn = txn_manager->get_current_transaction();
+                txn_manager->commit(curr_txn);
+                int txn_id = curr_txn->GetTransactionId();
+                WALRecord record{LogType::COMMIT, txn_id, "DUMMY_TABLe", RID(-1, -1), Tuple({}), Tuple({})};
+                wal_manager->add_record(record);
+            }
+        }
     }
 
         catch (const exception& e) {
