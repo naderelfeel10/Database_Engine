@@ -2,8 +2,9 @@
 
 
 WALRecovery::WALRecovery(const char* path){
+    cout<<path<<endl;
     //file should exist
-    fd = _open(path,_O_RDONLY | _O_BINARY);
+    fd = _open(path,_O_RDONLY | _O_BINARY|_O_CREAT );
 
     if(fd == -1){
         throw runtime_error("file not found");

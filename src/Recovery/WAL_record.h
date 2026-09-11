@@ -10,22 +10,22 @@
 //wal ensures durability of transactions
 //recovers from crashes and redos commited txns
 
-enum class LogType{BEGIN, UPDATE, COMMIT, ABORT};
+enum class LogType{BEGIN, INSERT, DELETE, UPDATE, COMMIT, ABORT};
 
 //basic record will be : type, txn_id, rid of edited tuple, old and new value 
 class WALRecord {
 public:
     LogType type;
     int transaction_id;
-
+    string table_name;
     RID rid;
     Tuple old_tuple;
     Tuple new_tuple;
 
     WALRecord():type(LogType::ABORT),transaction_id(-1),rid(RID(-1,-1)), old_tuple(Tuple({})), new_tuple(Tuple({})){}
 
-    WALRecord(LogType type,int transaction_id,RID rid,Tuple old_tuple,Tuple new_tuple)
-        :type(type), transaction_id(transaction_id), rid(rid), old_tuple((old_tuple)), new_tuple((new_tuple)) {}   
+    WALRecord(LogType type,int transaction_id, string table_name, RID rid,Tuple old_tuple,Tuple new_tuple)
+        :type(type), transaction_id(transaction_id),table_name(table_name) ,rid(rid), old_tuple((old_tuple)), new_tuple((new_tuple)) {}   
 
     void serialize_WAL_record(char* buffer);
     void deSerialize_WAL_record(char* buffer);
