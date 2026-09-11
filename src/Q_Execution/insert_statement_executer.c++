@@ -38,8 +38,8 @@ InsertTuple::InsertTuple(WALManager* wal_manager, TransactionManager* txn_manage
     }
     //insert this into WAL 
     int txn_id = txn->GetTransactionId();
-    string table_name = table_heap->getTableName();
-    WALRecord record(LogType::INSERT, txn_id, table_name, rid, Tuple({}), tuple);
+    int table_id = table_heap->getTableId();
+    WALRecord record(LogType::INSERT, txn_id, table_id, rid, Tuple({}), tuple);
     record.new_tuple.print();
     this->wal_manager->add_record(record);
 }

@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
+#include <share.h>
 using namespace std;
 
 //from row logs, recover

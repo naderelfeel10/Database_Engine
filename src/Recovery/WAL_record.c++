@@ -12,14 +12,9 @@ void WALRecord::serialize_WAL_record(char* buffer){
     memcpy(buffer+offset, &this->transaction_id, sizeof(transaction_id));
     offset += sizeof(transaction_id);
 
-    //save table_name size : 
-    int table_name_size = this->table_name.size();
-    memcpy(buffer+offset, &table_name_size, sizeof(table_name_size));
-    offset+=sizeof(table_name_size);
-
-    //save table_name
-    memcpy(buffer+offset, table_name.c_str(), table_name_size);
-    offset+=table_name_size;
+    //save table_id : 
+    memcpy(buffer+offset, &this->table_id, sizeof(table_id));
+    offset+=sizeof(table_id);
 
     //save rid
     rid.serialize(buffer+offset);
@@ -54,14 +49,9 @@ void WALRecord::deSerialize_WAL_record(char* buffer){
     memcpy( &this->transaction_id, buffer+offset, sizeof(transaction_id));
     offset += sizeof(transaction_id);
 
-    //load table_name size
-    int table_name_size{};
-    memcpy(&table_name_size , buffer+offset, sizeof(table_name_size));
-    offset += sizeof(table_name_size);
-
-    // load table name itself
-    this->table_name.assign(buffer + offset, table_name_size);
-    offset += table_name_size;
+    //load table_id
+    memcpy(&this->table_id , buffer+offset, sizeof(table_id));
+    offset += sizeof(table_id);
 
     //save rid
     rid.deserialize(buffer+offset);
@@ -85,8 +75,7 @@ int WALRecord::get_record_size(){
 
     size += sizeof(this->type);
     size += sizeof(this->transaction_id);
-    size += sizeof(int);
-    size += table_name.size();
+    size += sizeof(this->table_id);
     size += this->rid.getSerializedSize();
     size += this->old_tuple.getTupleSize();
     size += this->new_tuple.getTupleSize();

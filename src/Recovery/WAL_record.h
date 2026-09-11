@@ -17,15 +17,15 @@ class WALRecord {
 public:
     LogType type;
     int transaction_id;
-    string table_name;
+    int table_id;
     RID rid;
     Tuple old_tuple;
     Tuple new_tuple;
 
     WALRecord():type(LogType::ABORT),transaction_id(-1),rid(RID(-1,-1)), old_tuple(Tuple({})), new_tuple(Tuple({})){}
 
-    WALRecord(LogType type,int transaction_id, string table_name, RID rid,Tuple old_tuple,Tuple new_tuple)
-        :type(type), transaction_id(transaction_id),table_name(table_name) ,rid(rid), old_tuple((old_tuple)), new_tuple((new_tuple)) {}   
+    WALRecord(LogType type,int transaction_id, int table_id, RID rid,Tuple old_tuple,Tuple new_tuple)
+        :type(type), transaction_id(transaction_id),table_id(table_id) ,rid(rid), old_tuple((old_tuple)), new_tuple((new_tuple)) {}   
 
     void serialize_WAL_record(char* buffer);
     void deSerialize_WAL_record(char* buffer);

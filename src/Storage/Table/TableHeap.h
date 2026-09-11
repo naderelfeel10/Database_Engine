@@ -42,6 +42,7 @@ class TableHeap{
 
     private:
         string table_name;
+        int table_id;
         int first_page_id = -1;
         int last_page_id = -1; 
         vector<Column> cols;
@@ -79,7 +80,9 @@ class TableHeap{
         void setCols(vector<Column> cols);
 
         string getTableName();
+        int getTableId();
         void setTableName(string table_name);
+        void setTableId(int table_id);
         int get_first_page_id(){return this->first_page_id;}
         int get_last_page_id(){return this->last_page_id;}
 

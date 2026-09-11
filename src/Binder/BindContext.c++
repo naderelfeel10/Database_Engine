@@ -54,7 +54,7 @@ BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const strin
     }
 
     if(!found){
-        cerr<<"column does not exist: " + column_name<<endl;
+        throw runtime_error("column does not exist: " + column_name);
     }
     result->PrintTree("|",true);
 

@@ -4,8 +4,12 @@
 WALRecovery::WALRecovery(const char* path){
     cout<<path<<endl;
     //file should exist
-    fd = _open(path,_O_RDONLY | _O_BINARY|_O_CREAT );
-
+    fd = _sopen(
+        path,
+        _O_RDONLY | _O_BINARY | _O_CREAT,
+        _SH_DENYNO,
+        _S_IREAD | _S_IWRITE
+    );
     if(fd == -1){
         throw runtime_error("file not found");
     }
@@ -74,6 +78,7 @@ vector<WALRecord> WALRecovery::read_all_records() {
 WALRecovery::~WALRecovery(){
     if(fd != -1){
         _close(fd);
+        fd = -1;
     }
 }
 /*int

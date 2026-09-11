@@ -77,7 +77,10 @@ TableInfo* Catalog::CreateTable(const string& table_name,const vector<Column>& s
     info->table_heap = heap;
     info->first_page_id = heap->get_first_page_id();
 
+    heap->setTableId(info->table_id);
+
     tables[table_name] = info;
+    tables_ids_map[info->table_id] = info;
 
     return info;
 }
@@ -122,6 +125,8 @@ TableInfo* Catalog::CreateTable(const BoundCreateTableStatement& statement){
     info->table_heap = heap;
     info->first_page_id = heap->get_first_page_id();
 
+    heap->setTableId(info->table_id);
+
     //constraints resolving
     for(const auto& constraint :statement.constraints){
         //resolve col_indexes
@@ -161,6 +166,7 @@ TableInfo* Catalog::CreateTable(const BoundCreateTableStatement& statement){
     }
 
     tables.emplace(table_name,info);
+    tables_ids_map.emplace(info->table_id, info);
     return info;
 }
 
@@ -203,6 +209,13 @@ TableInfo* Catalog::GetTable(string table_name){
     return nullptr;
 }
 
+TableInfo* Catalog::GetTable(int table_id){
+    if(tables_ids_map.find(table_id) != tables_ids_map.end())
+        return tables_ids_map[table_id];
+
+    return nullptr;
+}
+
 
 bool Catalog::TableExists(string table_name){
     if(tables.find(table_name) != tables.end())
@@ -211,6 +224,12 @@ bool Catalog::TableExists(string table_name){
     return false;
 }
 
+bool Catalog::TableExists(int table_id){
+    if(tables_ids_map.find(table_id) != tables_ids_map.end())
+        return true;
+
+    return false;
+}
 vector<TableInfo*> Catalog::GetTables(){
     vector<TableInfo*> res;
     for(auto&[table_name, info] : this->tables){
@@ -282,6 +301,7 @@ void Catalog::load_catalog(int page_id=1){
 
     cout<<"number of tables : "<<number_of_tables<<endl;
     tables.clear();
+    tables_ids_map.clear();
     //laod actual table 
     for(int i=0;i<number_of_tables;i++){
         TableInfo* table_info = new TableInfo();
@@ -290,6 +310,7 @@ void Catalog::load_catalog(int page_id=1){
 
         string table_name=  table_info->table_name;
         tables[table_name] = table_info;
+        tables_ids_map[table_info->table_id] = table_info;
     }
 
 }

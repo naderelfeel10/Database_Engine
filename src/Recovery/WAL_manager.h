@@ -13,6 +13,7 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\TableHeap.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Catalog\Catalog.h"
 #include"unordered_set"
+#include <share.h>
 
 //an instance of WAL manager creates a wal file on HD, then we append data into it
 class WALManager{

@@ -189,6 +189,7 @@ class Catalog
 
         // table_name : table_info
         unordered_map<string,TableInfo*> tables;
+        unordered_map<int,TableInfo*> tables_ids_map;
         BufferPoolManager* BPM;
         int next_table_id{0};
         int catalog_first_page_id{-1};
@@ -210,8 +211,11 @@ class Catalog
         }
         void DropTable(string table_name);
         TableInfo* GetTable(string table_name);
+        TableInfo* GetTable(int table_id);
+        
 
         bool TableExists(string table_name);
+        bool TableExists(int table_id);
         vector<TableInfo*> GetTables();
 
         void save_catalog();

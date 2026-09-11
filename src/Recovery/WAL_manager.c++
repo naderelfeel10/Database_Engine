@@ -9,9 +9,19 @@ WALManager::WALManager(Catalog* catalog, WALRecovery* recovery_manager,TableHeap
     this->catalog = catalog;
 
     cout<<path<<endl;
-    fd = _open(path, _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY, _S_IREAD | _S_IWRITE);
+    fd = _sopen(
+        path,
+        _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY,
+        _SH_DENYNO,
+        _S_IREAD | _S_IWRITE
+    );
 
     if (fd == -1) {
+        cout << "WAL _open failed\n";
+        cout << "path = [" << path << "]\n";
+        cout << "errno = " << errno << "\n";
+        cout << "error = " << strerror(errno) << endl;
+
         throw std::runtime_error("Failed to open WAL file");
     }
 }
@@ -76,30 +86,38 @@ void WALManager::recover(){
     for(const WALRecord& record:records){
         
         if(record.type == LogType::BEGIN){
+            cout<<"txn_id"<<record.transaction_id<<endl;
             un_committed_txns.insert(record.transaction_id);
         }
         else if(record.type == LogType::COMMIT){
+            cout<<"txn_id"<<record.transaction_id<<endl;
             committed_txns.insert(record.transaction_id);
             un_committed_txns.erase(record.transaction_id);
         }
 
         else if(record.type == LogType::ABORT){
+            cout<<"txn_id"<<record.transaction_id<<endl;
             un_committed_txns.erase(record.transaction_id);
         }
     } 
+    cout<<"///"<<endl;
 
     for(auto&txn_id:committed_txns)cout<<txn_id;
+    cout<<"///"<<endl;
     for(auto&txn_id:un_committed_txns)cout<<txn_id;
+    cout<<"///"<<endl;
 
     for(WALRecord& record : records){
+
+        cout<<record.transaction_id<<endl;
 
         if(record.type == LogType::BEGIN || record.type == LogType::COMMIT || record.type == LogType::ABORT){
             continue;
         }
         //first load table heap from record table_id
-        string table_name = record.table_name;
-        cout<<table_name<<endl;
-        TableInfo* table_info =  this->catalog->GetTable(table_name);
+        int table_id = record.table_id;
+        cout<<table_id<<endl;
+        TableInfo* table_info =  this->catalog->GetTable(table_id);
         if(table_info == nullptr){
             throw runtime_error("table not found");
         }

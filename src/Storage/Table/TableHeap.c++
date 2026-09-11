@@ -527,9 +527,16 @@ string TableHeap::getTableName(){
     return this->table_name;
 }
 
+int TableHeap::getTableId(){
+    return this->table_id;
+}
+
 
 void TableHeap::setTableName(string table_name){
     this->table_name = table_name;
+}
+void TableHeap::setTableId(int table_id){
+    this->table_id = table_id;
 }
 
 /*

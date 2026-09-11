@@ -723,7 +723,7 @@ bool ExecutorFactory::execute_txn(const hsql::SQLStatement* stmt){
                 curr_txn = txn_manager->begin();
                 int txn_id = curr_txn->GetTransactionId();
 
-                WALRecord record{LogType::BEGIN, txn_id, "DUMMY_TABLE", RID(-1, -1), Tuple({}), Tuple({})};
+                WALRecord record{LogType::BEGIN, txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
                 this->wal_manager->add_record(record);
                 return true;
             }
@@ -733,7 +733,7 @@ bool ExecutorFactory::execute_txn(const hsql::SQLStatement* stmt){
                 txn_manager->commit(curr_txn);
                 int txn_id = curr_txn->GetTransactionId();
 
-                WALRecord record{LogType::COMMIT, txn_id, "DUMMY_TABLE", RID(-1, -1), Tuple({}), Tuple({})};
+                WALRecord record{LogType::COMMIT, txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
                 this->wal_manager->add_record(record);
                 return true;
             }
@@ -743,7 +743,7 @@ bool ExecutorFactory::execute_txn(const hsql::SQLStatement* stmt){
                 txn_manager->abort(curr_txn);
                 int txn_id = curr_txn->GetTransactionId();
 
-                WALRecord record{LogType::ABORT, txn_id, "DUMMY_TABLE", RID(-1, -1), Tuple({}), Tuple({})};
+                WALRecord record{LogType::ABORT, txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
                 this->wal_manager->add_record(record);
                 return true;
         }
@@ -1068,6 +1068,7 @@ TransactionManager* txn_manager = new TransactionManager();
 
 const char* table_name = "wal.bin";
 WALRecovery* recovery_manager = new WALRecovery(table_name);
+//recovery_manager->~WALRecovery();
 WALManager* wal_manager = new WALManager(catalog, recovery_manager,nullptr,table_name);
 wal_manager->recover();
 ExecutorFactory factory(txn_manager, catalog, context, wal_manager);
@@ -1113,19 +1114,26 @@ while (true) {
         Binder* binder = new Binder(catalog, context);
 
         const hsql::SQLStatement* stmt = result.getStatement(0);
-
+        curr_txn = txn_manager->get_current_transaction();
         if(stmt->type() == hsql::kStmtTransaction){
             bool is_txn = factory.execute_txn(stmt);
             curr_txn = txn_manager->get_current_transaction();
             if(is_txn){
                 continue;
             }
-        }else if(curr_txn==nullptr){
-            txn_manager->begin();
-            curr_txn = txn_manager->get_current_transaction();
-            int txn_id = curr_txn->GetTransactionId();
-            WALRecord record{LogType::BEGIN, txn_id, "DUMMY_TABLE", RID(-1, -1), Tuple({}), Tuple({})};
-            wal_manager->add_record(record);
+        }
+        else if(curr_txn==nullptr){
+            cout<<"curr txn is null"<<endl;
+            if(stmt->type() == hsql::kStmtInsert || stmt->type() == hsql::kStmtUpdate || stmt->type() == hsql::kStmtDelete){
+
+                txn_manager->begin();
+                curr_txn = txn_manager->get_current_transaction();
+                int txn_id = curr_txn->GetTransactionId();
+                WALRecord record{LogType::BEGIN, txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
+                wal_manager->add_record(record);
+
+            }
+
         }
 
         unique_ptr<BoundStatement> bound_stmt =
@@ -1312,14 +1320,15 @@ while (true) {
 
 
         if(stmt->type() != hsql::kStmtTransaction){
-            if(curr_txn==nullptr){
+                if(stmt->type() == hsql::kStmtInsert || stmt->type() == hsql::kStmtUpdate || stmt->type() == hsql::kStmtDelete){
             
-                curr_txn = txn_manager->get_current_transaction();
-                txn_manager->commit(curr_txn);
-                int txn_id = curr_txn->GetTransactionId();
-                WALRecord record{LogType::COMMIT, txn_id, "DUMMY_TABLe", RID(-1, -1), Tuple({}), Tuple({})};
-                wal_manager->add_record(record);
-            }
+                    curr_txn = txn_manager->get_current_transaction();
+                    int txn_id = curr_txn->GetTransactionId();
+                    txn_manager->commit(curr_txn);
+                    WALRecord record{LogType::COMMIT,txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
+                    wal_manager->add_record(record);
+                }
+            
         }
     }
 
