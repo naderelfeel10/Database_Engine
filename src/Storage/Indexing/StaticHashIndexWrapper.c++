@@ -1,6 +1,6 @@
 #include<iostream>
 #include<iostream>
-#include"StaticHashIndexWrapper.h"
+#include"Storage/Indexing/StaticHashIndexWrapper.h"
 using namespace std;
 
 

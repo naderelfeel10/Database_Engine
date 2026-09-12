@@ -1,7 +1,14 @@
 #include<iostream>
-#include"hash_join.h"
+#include"Q_Execution/hash_join.h"
 #include<chrono>
 using namespace std;
+
+
+HashJoin::HashJoin(AbstractExecuter* outer_table,AbstractExecuter* inner_table, AbstractPredicate* join_condition, string col_name):
+outer_table(outer_table), inner_table(inner_table),join_condition(join_condition)
+,join_col_name(col_name) ,curr_inner_tuple({}),outer_tuple({}){
+
+}
 
 void HashJoin::open(){
     this->outer_table->open();
@@ -109,6 +116,18 @@ bool HashJoin::has_column(string col_name){
     }
     return false;
 }
+
+TableHeap* HashJoin::getTableHeap(){
+    return nullptr;
+}
+
+TableHeap* HashJoin::getOuterTableHeap(){
+    return this->outer_table->getTableHeap();
+};
+
+TableHeap* HashJoin::getInnerTableHeap(){
+    return this->inner_table->getTableHeap();
+};
 
 ////////////////////////////////////////////
 ///////////////////////////////////////////

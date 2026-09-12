@@ -1,5 +1,5 @@
 #include<iostream>
-#include"BPlusTreeIndexWrapper.h"
+#include"Storage/Indexing/BPlusTreeIndexWrapper.h"
 using namespace std;
 
 
@@ -45,5 +45,23 @@ vector<RID> BPlusTreeIndexWrapper::searchRange(Field lower, Field upper){
 
 }
 
-        
+void BPlusTreeIndexWrapper::displayIndexPages(){
+    this->BPlusTreeIndex->printTree();
+};
 
+string BPlusTreeIndexWrapper::get_index_col_name(){
+    return this->col_name;
+}
+
+BPlusTreeIndexWrapper::~BPlusTreeIndexWrapper() {
+
+    this->BPlusTreeIndex->saveBPlusTree();
+    cout<<"saving B+ tree"<<endl;
+    
+    if(this->BPlusTreeIndex->root != nullptr) {
+
+        BPlusTreeIndex->clear(this->BPlusTreeIndex->root);
+        this->BPlusTreeIndex->root = nullptr;
+        
+    }
+}

@@ -1,8 +1,12 @@
-#include"delete_statement_executer.h"
+#include"Q_Execution/delete_statement_executer.h"
 #include<iostream>
 using namespace std;
 
 
+DeleteTuple::DeleteTuple(WALManager*wal_manager, TransactionManager* txn_manager, TableHeap* table_heap)
+:table_heap(table_heap),txn_manager(txn_manager),wal_manager(wal_manager){
+    this->wal_manager->set_table_heap(this->table_heap);
+}
 bool DeleteTuple::is_deleted(){return this->deleted;}
 
 bool DeleteTuple::getNext(Tuple* tuple){return false;};

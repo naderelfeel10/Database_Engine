@@ -1,6 +1,9 @@
-#include"binder.h"
-#include<iostream>
-#include "assert.h"
+#include"Binder/binder.h"
+
+Binder::Binder(Catalog* catalog, BindContext* context){
+    this->catalog = catalog;
+    this->context = context;
+}
 
 unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
     

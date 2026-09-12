@@ -1,5 +1,5 @@
 #include<iostream>
-#include"seq_scan_operator.h"
+#include"Q_Execution/seq_scan_operator.h"
 using namespace std;
 
 
@@ -104,6 +104,29 @@ bool SeqScan::has_column(string col_name){
         if(table_name+'.'+col.getColName()==col_name)return true;
     }
     return false;
+}
+
+TableHeap* SeqScan::getTableHeap(){
+    return this->Table_heap;
+}
+
+vector<Column> SeqScan::get_output_schema(){
+    return this->output_schema;
+}
+
+vector<RID> SeqScan::get_table_rids(){
+    this->table_rids = this->Table_heap->getTableRIDS();
+
+    for(auto&rid:this->table_rids)rid.print();
+    return this->table_rids;
+}
+
+RID SeqScan::get_curr_rid(){
+    return this->curr_rid_pointer;
+}
+
+RID SeqScan::get_prev_rid(){
+    return this->prev_rid_pointer;
 }
 
 ///////////////////////////////

@@ -1,8 +1,12 @@
 #include<iostream>
-#include"MergeJoinExecuter.h"
+#include"Q_Execution/MergeJoinExecuter.h"
 #include<chrono>
 using namespace std;
 
+MergeJoin::MergeJoin(BufferPoolManager*BPM, AbstractExecuter* outer_table, AbstractExecuter* inner_table, string join_col_name):
+            BPM(BPM),outer_table(outer_table),inner_table(inner_table),join_col_name(join_col_name){
+
+}
 
 void MergeJoin::open(){
 
@@ -230,6 +234,20 @@ bool MergeJoin::has_column(string col_name){
     }
     return false;
 }
+
+
+TableHeap* MergeJoin::getTableHeap(){
+    return nullptr;
+}
+
+TableHeap* MergeJoin::getOuterTableHeap(){
+    return this->outer_table->getTableHeap();
+}
+
+TableHeap* MergeJoin::getInnerTableHeap(){
+    return this->inner_table->getTableHeap();
+}
+
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////

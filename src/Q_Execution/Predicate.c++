@@ -1,5 +1,5 @@
 #include<iostream>
-#include"Predicate.h"
+#include"Q_Execution/Predicate.h"
 #include<cassert>
 using namespace std;
 
@@ -159,6 +159,10 @@ bool Predicate::evaluate( Tuple* tuple, vector<Column> cols)
     return this->checkPredicate();
 }
 
+Column* Predicate::getcol(int col_index){
+    if(col_index==0)return this->left_col;
+        return this->right_col;
+}
 /*
 bool Predicate::evaluate(Tuple* tuple,  vector<Column> cols)
 {

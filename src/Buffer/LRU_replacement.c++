@@ -1,5 +1,5 @@
 #include<iostream>
-#include"LRU_replacement.h"
+#include"Buffer/LRU_replacement.h"
 
 
 

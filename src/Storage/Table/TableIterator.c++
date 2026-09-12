@@ -1,6 +1,6 @@
 #include<iostream>
 #include<cassert>
-#include"TableIterator.h"
+#include"Storage/Table/TableIterator.h"
 
 
 TableIterator::TableIterator(TableHeap* table_heap, RID starting_rid, RID stopping_rid){

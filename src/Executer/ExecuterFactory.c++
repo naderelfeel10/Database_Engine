@@ -1,7 +1,15 @@
-#include"ExecutorFactory.hpp"
+#include"Executer/ExecutorFactory.h"
 #include<iostream>
 using namespace std;
 
+
+ExecutorFactory::ExecutorFactory(TransactionManager* txn_manager, Catalog* catalog, BindContext* context, WALManager* wal_manager):txn_manager(txn_manager),
+    catalog(catalog), context(context){
+        this->wal_manager = wal_manager;
+        cout << "wal_manager = " << wal_manager << endl;
+        cout << "wal_manager = " << this->wal_manager << endl;
+
+}
 //create the factory executer based on plan 
 AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
     

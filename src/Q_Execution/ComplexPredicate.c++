@@ -1,9 +1,19 @@
 #include<iostream>
-#include"ComplexPredicate.h"
+#include"Q_Execution/ComplexPredicate.h"
 #include<cassert>
 using namespace std;
 
 
+ComplexPredicate::ComplexPredicate(AbstractPredicate* left_predicate, AbstractPredicate* right_predicate, ComplexPredicateType type):left_predicate(left_predicate),
+right_predicate(right_predicate),c_predicate_type(type){}
+
+
+AbstractPredicate* ComplexPredicate::getpred(int pred_index){
+    if(pred_index==0){
+        return this->left_predicate;
+    }
+    return this->right_predicate;
+}
 /*
 bool ComplexPredicate::checkcomplexPredicate(){
 

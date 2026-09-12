@@ -1,5 +1,5 @@
 #include<iostream>
-#include"Catalog.h"
+#include"Catalog/Catalog.h"
 
 vector<int> column_names_to_indexes(vector<string> names, vector<Column> schema);
 
@@ -313,6 +313,124 @@ void Catalog::load_catalog(int page_id=1){
         tables_ids_map[table_info->table_id] = table_info;
     }
 
+}
+
+
+//just printing
+void TableInfo::printTableInfo(){
+            cout << "========================================\n";
+            cout << "              TABLE INFO\n";
+            cout << "========================================\n";
+        
+            cout << "Table Name     : " << table_name << '\n';
+            cout << "Table ID       : " << table_id << '\n';
+            cout << "First Page ID  : " << first_page_id << '\n';
+            cout << "Offset         : " << offset << '\n';
+        
+            // ---------------- Schema ----------------
+            cout << "\n--------------- SCHEMA ----------------\n";
+        
+            cout << "Number of Columns: " << schema.size() << '\n';
+        
+            for(auto&col:schema){
+                col.printCol();
+            }
+        
+            // ---------------- Indexes ----------------
+            cout << "\n--------------- INDEXES ----------------\n";
+        
+            cout << "Number of Indexes: " << indexes.size() << '\n';
+        
+            for (size_t i = 0; i < indexes.size(); ++i)
+            {
+                const IndexInfo& index = indexes[i];
+            
+                cout << "\nIndex [" << i << "]\n";
+                cout << "  Name        : " << index.name << '\n';
+                cout << "  Column      : " << index.column_name << '\n';
+                cout << "  Type        : " << static_cast<int>(index.type) << '\n';
+                cout << "  Root Page   : " << index.root_page << '\n';
+                cout << "  Offset      : " << index.offset << '\n';
+            }
+        
+            // ---------------- Foreign Keys ----------------
+            cout << "\n----------- FOREIGN KEYS ---------------\n";
+        
+            cout << "Number of Foreign Keys: " << foreign_keys.size() << '\n';
+        
+            for (size_t i = 0; i < foreign_keys.size(); ++i)
+            {
+                const ForeignKeyInfo& fk = foreign_keys[i];
+            
+                cout << "\nForeign Key [" << i << "]\n";
+            
+                cout << "  Columns       : ";
+                for (size_t j = 0; j < fk.column_ids.size(); ++j)
+                {
+                    cout << fk.column_ids[j];
+                    if (j + 1 < fk.column_ids.size())
+                        cout << ", ";
+                }
+                cout << '\n';
+            
+                cout << "  Referenced Table ID: "
+                     << fk.referenced_table_id << '\n';
+            
+                cout << "  Referenced Columns : ";
+                for (size_t j = 0; j < fk.referenced_column_ids.size(); ++j)
+                {
+                    cout << fk.referenced_column_ids[j];
+                
+                    if (j + 1 < fk.referenced_column_ids.size())
+                        cout << ", ";
+                }
+                cout << '\n';
+            }
+        
+            // ---------------- Unique Constraints ----------------
+            cout << "\n---------- UNIQUE CONSTRAINTS ----------\n";
+        
+            cout << "Number of Unique Constraints: "
+                 << unique_constraints.size() << '\n';
+        
+            for (size_t i = 0; i < unique_constraints.size(); ++i)
+            {
+                cout << "  Unique [" << i << "] Columns: ";
+            
+                for (size_t j = 0; j < unique_constraints[i].size(); ++j)
+                {
+                    cout << unique_constraints[i][j];
+                
+                    if (j + 1 < unique_constraints[i].size())
+                        cout << ", ";
+                }
+            
+                cout << '\n';
+            }
+        
+            // ---------------- Primary Key ----------------
+            cout << "\n----------- PRIMARY KEY ----------------\n";
+        
+            cout << "Primary Key Columns: ";
+        
+            if (primary_key_columns.empty())
+            {
+                cout << "NONE";
+            }
+            else
+            {
+                for (size_t i = 0; i < primary_key_columns.size(); ++i)
+                {
+                    cout << primary_key_columns[i];
+                
+                    if (i + 1 < primary_key_columns.size())
+                        cout << ", ";
+                }
+            }
+        
+            cout << '\n';
+        
+            cout << "========================================\n";
 }
 ///  ////////
 /////

@@ -1,4 +1,4 @@
-#include"WAL_record.h"
+#include"Recovery/WAL_record.h"
 
 //this record shall be flushed on disk immediatly
 //serialize it into stream of bytes

@@ -1,6 +1,23 @@
 #include<iostream>
-#include"ExternalMergeSortExecuter.h"
+#include"Q_Execution/ExternalMergeSortExecuter.h"
 using namespace std;
+
+
+ExternalMergeSort::ExternalMergeSort(BufferPoolManager* BPM,AbstractExecuter* child_executer,Column sort_key,sorting_methods sorting_method):BPM(BPM),child_executer(child_executer)
+                                                                                            ,sort_key(sort_key),sorting_method(sorting_method){
+    this->open();
+};
+
+vector<Column> ExternalMergeSort::get_output_schema(){
+    /*for(auto& col: this->child_executer->get_output_schema()){
+        col.printCol();
+    }*/
+    return this->output_schema;
+}
+
+TableHeap* ExternalMergeSort::getTableHeap(){
+    return this->child_executer->getTableHeap();
+}
 
 void ExternalMergeSort::open(){
     //most of sorting logic will be here:

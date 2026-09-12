@@ -1,7 +1,16 @@
 #include<iostream>
-#include"Nested_loop_join.h"
+#include"Q_Execution/Nested_loop_join.h"
 #include<chrono>
 using namespace std;
+
+
+
+NestedLoopJoin::NestedLoopJoin(AbstractExecuter* outer_table,AbstractExecuter* inner_table,
+               AbstractPredicate* join_condition, join_types join_type=INNER_JOIN):
+               outer_table(outer_table), inner_table(inner_table),
+               join_condition(join_condition),join_type(join_type){
+        this->open();
+}
 
 void NestedLoopJoin::open(){
     this->outer_table->open();
@@ -155,6 +164,19 @@ bool NestedLoopJoin::has_column(string col_name){
         if(col.getColName()==col_name)return true;
     }
     return false;
+}
+
+
+TableHeap* NestedLoopJoin::getTableHeap(){
+    return nullptr;
+}
+
+TableHeap* NestedLoopJoin::getOuterTableHeap(){
+    return this->outer_table->getTableHeap();
+}
+
+TableHeap* NestedLoopJoin::getInnerTableHeap(){
+    return this->inner_table->getTableHeap();
 }
 //////////////////////////////
 //////////////////////////////

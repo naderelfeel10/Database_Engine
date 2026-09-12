@@ -1,6 +1,4 @@
-#include"BindContext.h"
-using namespace std;
-
+#include"Binder/BindContext.h"
 
 BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const string& column_name){ 
     

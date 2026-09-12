@@ -1,8 +1,13 @@
 #include<iostream>
-#include"HashAggregateExecuter.h"
+#include"Q_Execution/HashAggregateExecuter.h"
 #include<chrono>
 using namespace std;
 
+
+HashAggregateExecuter::HashAggregateExecuter(BufferPoolManager* BPM, AbstractExecuter*table, vector<int> grouping_keys, vector<GroupingFunction> grouping_functions ):
+    BPM(BPM),table(table), grouping_keys(grouping_keys), grouping_functions(grouping_functions){
+        agg_state.assign(grouping_functions.size(), AggValues{});
+}
 
 void HashAggregateExecuter::open(){
     this->table->open();
@@ -234,6 +239,11 @@ bool HashAggregateExecuter::has_column(string col_name){
     }
     return false;
 }
+
+TableHeap* HashAggregateExecuter::getTableHeap(){
+    return nullptr;
+};
+
 /*
 vector<string> tables1;
 map<string, TableHeap*>tables_map1;

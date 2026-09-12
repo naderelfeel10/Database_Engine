@@ -1,7 +1,18 @@
 #include<iostream>
-#include"IndexedNested_loop_join.h"
+#include"Q_Execution/IndexedNested_loop_join.h"
 #include<chrono>
 using namespace std;
+
+
+IndexedNestedLoopJoin::IndexedNestedLoopJoin(BufferPoolManager* BPM, AbstractExecuter* outer_table,AbstractExecuter* inner_table, Index* inner_index, AbstractPredicate* join_condition):
+                    BPM(BPM), outer_table(outer_table),inner_table(inner_table),
+                    inner_index(inner_index), join_condition(join_condition){
+    
+    string col_name  = inner_index->get_index_col_name();
+    col_index = this->outer_table->getTableHeap()->getColIndex(col_name);
+}
+
+
 
 void IndexedNestedLoopJoin::open(){
     this->outer_table->open();
@@ -101,6 +112,14 @@ bool IndexedNestedLoopJoin::has_column(string col_name){
     return false;
 }
 
+
+TableHeap* IndexedNestedLoopJoin::getTableHeap(){
+    return nullptr;
+};
+
+TableHeap* IndexedNestedLoopJoin::getOuterTableHeap(){
+    return this->outer_table->getTableHeap();
+};
 ////////////////////////////////////////////
 ///////////////////////////////////////////
 
