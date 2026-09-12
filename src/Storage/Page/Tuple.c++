@@ -30,7 +30,7 @@ void Tuple::print() {
 }
 
 int Tuple::getTupleSize() const {
-    int total = 1 + sizeof(int);
+    int total = sizeof(this->is_deleted) + sizeof(this->tulpe_size);
     for (const auto& field : fields) {
         total += field.getSerializedSize();
     }
@@ -42,8 +42,8 @@ void Tuple::serialize(char* buffer){
     buffer[0] = is_deleted?1:0;
     offset +=1;
 
-    memcpy(buffer+offset, &tulpe_size, sizeof(int));
-    offset +=sizeof(int);
+    memcpy(buffer+offset, &tulpe_size, sizeof(tulpe_size));
+    offset +=sizeof(tulpe_size);
 
     for(auto&field:this->fields){
         field.serialize(buffer+offset);
@@ -56,8 +56,8 @@ void Tuple::deserialize(char* buffer){
     is_deleted =  buffer[0]?true:false;
     offset +=1;
 
-    memcpy(&tulpe_size,buffer+offset,  sizeof(int));
-    offset +=sizeof(int);
+    memcpy(&tulpe_size,buffer+offset,  sizeof(tulpe_size));
+    offset +=sizeof(tulpe_size);
 
         fields.clear();
         while(offset<tulpe_size){

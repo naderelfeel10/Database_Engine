@@ -6,9 +6,16 @@ using namespace std;
 
 
 Page::Page(int page_id){
+
     memset(data,0,PAGE_SIZE);
 
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
+    
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
+    
+    //set up base parameters
     header->page_id = (uint16_t)page_id;
     header->num_tuples = 0;
     header->next_page_id = -1;
@@ -27,6 +34,9 @@ int Page::insertTuple(Tuple tuple){
 
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
     //get free space first to check if there is enough in this page
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
     uint16_t free_size = header->free_space_pointer - ( sizeof(PageHeader) + (header->num_tuples)*sizeof(Slot));
 
 
@@ -78,7 +88,9 @@ int Page::insertData(char* buffer, uint16_t raw_size) {
     uint16_t aligned_entry_size = (raw_size + 7) & ~7;
 
     PageHeader* header = reinterpret_cast<PageHeader*>(this->data);
-    
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
     uint16_t slot_array_end = sizeof(PageHeader) + ((header->num_tuples + 1) * sizeof(Slot));
     
     if (header->free_space_pointer < slot_array_end || 
@@ -105,13 +117,20 @@ int Page::insertData(char* buffer, uint16_t raw_size) {
 
 // should pass slot num and empty tuple by reference
 bool Page::getTuple(int slot_num, Tuple& tuple){
+    
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
     
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
+
     if(slot_num < 0 || slot_num >= header->num_tuples){
         return false;
     }
+
     Slot* slots = reinterpret_cast<Slot*>(data+sizeof(PageHeader));
     int offset = slots[slot_num].offset;
+
     tuple.deserialize(data+ offset);
 
     if(tuple.get_is_deleted()){
@@ -127,11 +146,17 @@ bool Page::getTuple(int slot_num, Tuple& tuple){
 
 }
 bool Page::getIndexData(int slot_num, char*& buffer){
+    
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
     
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
+
     if(slot_num < 0 || slot_num >= header->num_tuples){
         return false;
     }
+
     Slot* slots = reinterpret_cast<Slot*>(data+sizeof(PageHeader));
     int offset = slots[slot_num].offset;
     buffer = data+offset;
@@ -144,8 +169,13 @@ bool Page::getIndexData(int slot_num, char*& buffer){
     return true;
 }
 bool Page::deleteTuple(int slot_num){
+    
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
     
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
+
     if(slot_num < 0 || slot_num >= header->num_tuples){
         return false;
     }
@@ -169,53 +199,85 @@ bool Page::deleteTuple(int slot_num){
 }
 
 int Page::updateTuple(int slot_num, Tuple new_tuple){
+    
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
     
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
+
     if(slot_num < 0 || slot_num >= header->num_tuples){
         cout<<"slot num is invalid"<<endl;
         return -1;
     }
+
     Slot* slots = reinterpret_cast<Slot*>(data+sizeof(PageHeader));
     
-    int dummy2 = slot_num;
+    //if new_tuple is larger than old tuple then :
+    // 1. delete old one
+    //reinsert new one somewhere else
+    int old_slot_num = slot_num;
     if (new_tuple.getTupleSize() > slots[slot_num].size){
         cout<<"old and new tuple sizes are not equal"<<endl;
-        bool dummy1 = this->deleteTuple(slot_num);
-        if(dummy1){
-        dummy2 = this->insertTuple(new_tuple);
-        return dummy2;
+        
+        bool is_deleted = this->deleteTuple(slot_num);
+        //if deleted successfuly then insert the new one
+        if(is_deleted){
+            int new_slo_num = this->insertTuple(new_tuple);
+            return new_slo_num;
+        }
+        else{
+            return -1;
         }
     }
+
+    //if new tuple fits in old tuple then :
+    // then just update it inplace    
     new_tuple.serialize(data+slots[slot_num].offset);
-    return dummy2;
+    return old_slot_num;
 
 }
 
 vector<Field> Page::get_field_from_all_tuples(int col_index){
-
  
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
+    
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
     vector<Field> res;
+    
     for(int i=0;i<header->num_tuples;i++){
         Tuple tuple({});
+        
         this->getTuple(i,tuple);
         res.push_back(tuple.fields[col_index]);
     }
+
     return res;
 }
 
 vector<vector<Field>> Page::get_custom_fields_from_all_tuples(vector<int> col_indexes){
 
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
+    
+    if(header == nullptr){
+        throw runtime_error("pageheader is null");
+    }
+
     vector<vector<Field>> res;
     // i want to return custom fields from the page, not the whole tuple
     for(int i=0;i<header->num_tuples;i++){
+
         vector<Field> tmp_res;
         Tuple tuple({});
+
         this->getTuple(i,tuple);
+        //select needed fields
         for(auto&col_index:col_indexes){
             tmp_res.push_back(tuple.fields[col_index]);
         }
+        //push each vector of fields to the 2d arr res
         res.push_back(tmp_res);
     }
 
@@ -228,9 +290,13 @@ char* Page::getData(){
 
 //check if tuple is deleted
 bool Page::is_deleted(int slot_num){
+    
     Tuple tuple({});
-    this->getTuple(slot_num, tuple);
-
+    int is_found = this->getTuple(slot_num, tuple);
+    
+    if(!is_found){
+        throw runtime_error("this tuple is not  found");
+    }
     return tuple.get_is_deleted();
 }
 /*

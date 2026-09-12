@@ -4,84 +4,96 @@
 #include "Storage/Page/Field.h"
 using namespace std;
 
-
+//constrcutors to accecpt all types of data :
+//INT field
+Field::Field(FieldType type,int value){
+    fieldType  = FieldType(type);
+    VALUE_INT = value;
+    this->size = sizeof(value);
+}
+//double field
+Field::Field(FieldType type,double value){
+    fieldType  = FieldType(type);
+    this->size = sizeof(value);
+    VALUE_FLOAT = value;
     
-        Field::Field(FieldType type,int value){
-            fieldType  = FieldType(type);
-            VALUE_INT = value;
-            this->size = sizeof(value);
-        }
-        Field::Field(FieldType type,double value){
-            fieldType  = FieldType(type);
-            this->size = sizeof(value);
-            VALUE_FLOAT = value;
-            
-        }
-        Field::Field(FieldType type,bool value){
-            fieldType  = FieldType(type);
-            VALUE_BOOL = value;
-            this->size = sizeof(value);
-        }
-        Field::Field(FieldType type,const char* value){
-            fieldType  = FieldType(type);
-            this->size = strlen(value);
-            //VALUE_STRING = value;
-            this->VALUE_STRING = new char[this->size + 1];
-            strcpy((char*)this->VALUE_STRING, value);
-            
-        }
+}
+//bool field
+Field::Field(FieldType type,bool value){
+    fieldType  = FieldType(type);
+    VALUE_BOOL = value;
+    this->size = sizeof(value);
+}
+//string field
+Field::Field(FieldType type,const char* value){
+    fieldType  = FieldType(type);
+    this->size = strlen(value);
+    //VALUE_STRING = value;
+    this->VALUE_STRING = new char[this->size + 1];
+    strcpy((char*)this->VALUE_STRING, value);
+}
 
-    Field::Field(const Field& other) {
-        this->fieldType = other.fieldType;
-        this->size = other.size;
-        this->is_null = other.is_null;
+Field::Field(const Field& other) {
 
-        if (fieldType == TYPE_STRING && other.VALUE_STRING != nullptr) {
-            this->VALUE_STRING = new char[size + 1];
-            memcpy((void*)this->VALUE_STRING, other.VALUE_STRING, size + 1);
-        } else {
-            this->VALUE_STRING = nullptr; // Or copy other primitive types
-            this->VALUE_INT = other.VALUE_INT;
-            this->VALUE_FLOAT = other.VALUE_FLOAT;
-            this->VALUE_BOOL = other.VALUE_BOOL;
-        }
+    this->fieldType = other.fieldType;
+    this->size = other.size;
+    this->is_null = other.is_null;
+
+    if (fieldType == TYPE_STRING && other.VALUE_STRING != nullptr) {
+
+        this->VALUE_STRING = new char[size + 1];
+        memcpy((void*)this->VALUE_STRING, other.VALUE_STRING, size + 1);
     }
+    else {
+        this->VALUE_STRING = nullptr; // Or copy other primitive types
+        this->VALUE_INT = other.VALUE_INT;
+        this->VALUE_FLOAT = other.VALUE_FLOAT;
+        this->VALUE_BOOL = other.VALUE_BOOL;
+    }
+}
 
 
-        Field::Field(FieldType type):fieldType(type){
-            this->is_null = true;
-            this->size = 0;
-            switch (type)
-            {
-            case TYPE_INT:
-                VALUE_INT = 0;
-                break;
-            case TYPE_FLOAT:
-                VALUE_FLOAT = 0.0;
-                break;
-            case TYPE_STRING:
-                VALUE_STRING = nullptr;
-                break;
-            case TYPE_BOOL:
-                VALUE_BOOL = false;
-                break;
-            default:
-                break;
-            }
+Field::Field(FieldType type):fieldType(type){
 
+        this->is_null = true;
+        this->size = 0;
+
+        switch (type)
+        {
+        case TYPE_INT:
+            VALUE_INT = 0;
+            break;
+        case TYPE_FLOAT:
+            VALUE_FLOAT = 0.0;
+            break;
+        case TYPE_STRING:
+            VALUE_STRING = nullptr;
+            break;
+        case TYPE_BOOL:
+            VALUE_BOOL = false;
+            break;
+        default:
+            break;
         }
 
-        FieldType Field::getFieldType()const{
-            return this->fieldType;
-        }
+}
 
-        bool Field::isNull()  { return is_null; }
-        int Field::getSize() { return size; }
+FieldType Field::getFieldType()const{
+    return this->fieldType;
+}
+
+bool Field::isNull(){
+    return this->is_null;
+}
+
+int Field::getSize(){
+     return this->size;
+}
 
 
-        int Field::getSerializedSize() const {
-            return 1 + 1+ 4 + size; 
-        }
+int Field::getSerializedSize() const {
+    return 1 + 1+ 4 + size; 
+}
 
 // making printing more readable
 /*
@@ -159,7 +171,7 @@ void Field::print() {
         case TYPE_FLOAT: std::cout << std::left << std::setw(VAL_WIDTH) << VALUE_FLOAT; break;
         case TYPE_BOOL:  std::cout << std::left << std::setw(VAL_WIDTH) << (VALUE_BOOL ? "true" : "false"); break;
         case TYPE_STRING: std::cout << std::left << std::setw(VAL_WIDTH) << (VALUE_STRING ? VALUE_STRING : "[EMPTY]"); break;
-        case TYPE_NULL: cout<<"NULL";break;
+        case TYPE_NULL: std::cout << std::left << std::setw(VAL_WIDTH) << "NULL"; break;
         default:         std::cout << std::left << std::setw(VAL_WIDTH) << "??"; break;
     }
     std::cout << " | ";
@@ -171,12 +183,15 @@ void Field::print() {
 int Field::getFieldValueInt()const {
     return VALUE_INT;
 }
+
 float Field::getFieldValueFloat()const {
     return VALUE_FLOAT;
 }
+
 bool Field::getFieldValueBool()const {
     return VALUE_BOOL;
 }
+
 const char* Field::getFieldValueStr()const {
     return VALUE_STRING;
 }
@@ -201,11 +216,12 @@ FieldValue Field::getFieldValue() const
     case TYPE_FLOAT:
         return VALUE_FLOAT;
     case TYPE_BOOL:
-
         return VALUE_BOOL;
-
     case TYPE_STRING:
         return string(VALUE_STRING);
+
+    case TYPE_NULL:
+        return nullptr;
     default:
         throw runtime_error("unknown fieldtype");
     }
@@ -214,23 +230,26 @@ FieldValue Field::getFieldValue() const
 
 void Field::serialize(char* buffer){
 
+        //starting with offset=1, to save offset=0 for field type
         int offset = 1;
-        memcpy(buffer+offset,&this->size,sizeof(int));
-        offset+=sizeof(int);
+        //save size
+        memcpy(buffer+offset,&this->size,sizeof(size));
+        offset+=sizeof(size);
+        //save is_null
+        memcpy(buffer+offset,&this->is_null,sizeof(is_null));
+        offset+=sizeof(is_null);
 
-        memcpy(buffer+offset,&this->is_null,sizeof(bool));
-        offset+=1;
         switch (fieldType)
         {
         case TYPE_INT:{
             buffer[0] = 'I';
 
             if(!is_null)
-                memcpy(buffer+offset,&VALUE_INT,sizeof(int));
+                memcpy(buffer+offset,&VALUE_INT,sizeof(VALUE_INT));
             else 
-                memset(buffer+offset,0,sizeof(int));
+                memset(buffer+offset,0,sizeof(VALUE_INT));
             
-            offset+=sizeof(int);
+            offset+=sizeof(VALUE_INT);
 
             break;
         }
@@ -238,11 +257,11 @@ void Field::serialize(char* buffer){
             buffer[0] = 'F';
 
             if(!is_null)
-                memcpy(buffer+offset,&VALUE_FLOAT,sizeof(double));
+                memcpy(buffer+offset,&VALUE_FLOAT,sizeof(VALUE_FLOAT));
             else 
-                memset(buffer+offset,0,sizeof(double));
+                memset(buffer+offset,0,sizeof(VALUE_FLOAT));
             
-            offset+=sizeof(double);
+            offset+=sizeof(VALUE_FLOAT);
 
             break;
         }
@@ -250,11 +269,11 @@ void Field::serialize(char* buffer){
             buffer[0] = 'B';
 
             if(!is_null)
-                memcpy(buffer+offset,&VALUE_BOOL,sizeof(bool));
+                memcpy(buffer+offset,&VALUE_BOOL,sizeof(VALUE_BOOL));
             else 
-                memset(buffer+offset,0,sizeof(bool));
+                memset(buffer+offset,0,sizeof(VALUE_BOOL));
             
-            offset+=sizeof(bool);
+            offset+=sizeof(VALUE_BOOL);
 
             break;
         }
@@ -270,6 +289,7 @@ void Field::serialize(char* buffer){
             offset += size;
             break;
         }
+        //no need, keep if for now
         case TYPE_NULL:{
             //type byte is N means null
             buffer[0] = 'N';
@@ -282,15 +302,16 @@ void Field::serialize(char* buffer){
     }
 
 
-    void Field::deserialize(char* buffer){
+void Field::deserialize(char* buffer){
+        //fetch type from first bit
         char type = buffer[0];
         int offset = 1;
         
-        memcpy(&this->size,buffer+offset,sizeof(int));
-        offset+=sizeof(int);
+        memcpy(&this->size,buffer+offset,sizeof(size));
+        offset+=sizeof(size);
 
-        memcpy(&this->is_null,buffer+offset,sizeof(bool));
-        offset+=sizeof(bool);
+        memcpy(&this->is_null,buffer+offset,sizeof(is_null));
+        offset+=sizeof(is_null);
 
         switch (type)
         {
@@ -303,32 +324,36 @@ void Field::serialize(char* buffer){
         }
         case 'I':{
             this->fieldType = TYPE_INT;
-            memcpy(&this->VALUE_INT,buffer+offset,sizeof(int));
-            offset+=sizeof(int);
+            memcpy(&this->VALUE_INT,buffer+offset,sizeof(VALUE_INT));
+            offset+=sizeof(VALUE_INT);
             break;
         }
         case 'F':{
             this->fieldType = TYPE_FLOAT;
-            memcpy(&this->VALUE_FLOAT,buffer+offset,sizeof(double));
-            offset+=sizeof(double);
+            memcpy(&this->VALUE_FLOAT,buffer+offset,sizeof(VALUE_FLOAT));
+            offset+=sizeof(VALUE_FLOAT);
             break;
         }
         case 'B':{
             this->fieldType = TYPE_BOOL;
-            memcpy(&this->VALUE_BOOL,buffer+offset,sizeof(bool));
-            offset+=sizeof(bool);
+            memcpy(&this->VALUE_BOOL,buffer+offset,sizeof(VALUE_BOOL));
+            offset+=sizeof(VALUE_BOOL);
             break;
         }
         case 'S':{
             this->fieldType = TYPE_STRING;
             VALUE_STRING = new char[size+1];
+            //copy base size withoud the terminator
             memcpy((void*)VALUE_STRING,buffer+offset,size);
+            //then add the terminator manually
             ((char*)VALUE_STRING)[size] = '\0';
+
             offset+=size;
             break;
         }
 
         default:
+            throw runtime_error("field type is not found");
             break;
         }
 
@@ -456,7 +481,26 @@ Field& Field::operator=(const Field& other) {
 
 bool Field::operator==(const Field& other)const{
 
-    if(this->fieldType != other.getFieldType()) return false;
+    if(this->fieldType != other.getFieldType()){
+        return false;
+    }
+
+    //check if is_null first
+    if(this->is_null){
+        if(other.is_null){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    if(other.is_null){
+        if(this->is_null){
+            return true;
+        }else{
+            return false;
+        }
+    }
 
     switch (other.getFieldType())
     {
@@ -486,6 +530,10 @@ bool Field::operator>(const Field& other)const{
     if(this == &other) return false;
     if(this->fieldType != other.getFieldType()) return false;
     
+    //check for nulls
+    if(this->is_null || other.is_null){
+        throw runtime_error("null fields can't be compared");
+    }
     switch(other.fieldType){
         case TYPE_INT:{
             return (this->getFieldValueInt() > other.getFieldValueInt());
@@ -507,10 +555,16 @@ bool Field::operator>(const Field& other)const{
         return false;
     }
 }
+
 bool Field::operator<(const Field& other)const{
     if(this == &other) return false;
     if(this->fieldType != other.getFieldType()) return false;
-    
+
+    //check for nulls
+    if(this->is_null || other.is_null){
+        throw runtime_error("null fields can't be compared");
+    }
+
     switch(other.fieldType){
         case TYPE_INT:{
             return (this->getFieldValueInt() < other.getFieldValueInt());
@@ -532,10 +586,16 @@ bool Field::operator<(const Field& other)const{
         return false;
     }
 }
+
 bool Field::operator>=(const Field& other)const{
     if(this == &other) return true;
     if(this->fieldType != other.getFieldType()) return false;
-    
+
+    //check for nulls
+    if(this->is_null || other.is_null){
+        throw runtime_error("null fields can't be compared");
+    }
+
     switch(other.fieldType){
         case TYPE_INT:{
             return (this->getFieldValueInt() >= other.getFieldValueInt());
@@ -561,6 +621,11 @@ bool Field::operator>=(const Field& other)const{
 bool Field::operator<=(const Field& other)const{
     if(this == &other) return true;
     if(this->fieldType != other.getFieldType()) return false;
+
+    //check for nulls
+    if(this->is_null || other.is_null){
+        throw runtime_error("null fields can't be compared");
+    }
     
     switch(other.fieldType){
         case TYPE_INT:{
