@@ -61,15 +61,15 @@ void DiskManager::saveMetaData(){
     for(auto &table:tables_names){
         //save name length
         int name_size = table.first.size();
-        memcpy(buffer+ offset, &name_size, sizeof(int));
-        offset+=sizeof(int);
+        memcpy(buffer+ offset, &name_size, sizeof(name_size));
+        offset+=sizeof(name_size);
 
         //save actual name
         memcpy(buffer+ offset, table.first.c_str(), name_size);
         offset+=name_size;
         //save page_id
-        memcpy(buffer+ offset, &table.second, sizeof(int));
-        offset+=sizeof(int);
+        memcpy(buffer+ offset, &table.second, sizeof(table.second));
+        offset+=sizeof(table.second);
     }
 
     // save deleted_slots for upcomming reuse
@@ -123,15 +123,15 @@ void DiskManager::loadMetaData(){
     tables_names.clear();
     for(int i=0;i<header.number_of_tables;i++){
         int name_size ;
-        memcpy(&name_size, buffer+offset, sizeof(int));
-        offset+=sizeof(int);
+        memcpy(&name_size, buffer+offset, sizeof(name_size));
+        offset+=sizeof(name_size);
        
         string table_name(buffer + offset, name_size);
         offset += name_size;
 
         int page_id{-1};
-        memcpy(&page_id, buffer+offset, sizeof(int));
-        offset+=sizeof(int);
+        memcpy(&page_id, buffer+offset, sizeof(page_id));
+        offset+=sizeof(page_id);
 
         this->tables_names[table_name] = page_id;
     }
@@ -143,8 +143,9 @@ void DiskManager::loadMetaData(){
     deleted_slots.clear();
     for(int i{};i<header.deleted_size;i++){
         size_t tmp;
-        memcpy(buffer+offset, &tmp, sizeof(tmp));
+        memcpy(&tmp, buffer+offset,sizeof(tmp));
         deleted_slots.push_back(tmp);
+
         offset+=sizeof(tmp);
     }
     
@@ -181,14 +182,23 @@ void DiskManager::writePage(int page_id, const char* data){
 
 void DiskManager::readPage(int page_id, char*data){
     //cout<<"reading page "<<page_id<<endl;
+    //check if page exists in page_dir
     if (pages_table.find(page_id) == pages_table.end()) {
         cout<<"page not found"<<endl;
+        //throw runtime_error("page is not found");
         return; 
     }
 
+    //read the page from HD
     DB_file.clear();
     size_t offset = pages_table[page_id];
     DB_file.seekg(offset, ios::beg);
+
+    //check if page seek successfully
+    if(DB_file.fail()){
+        throw runtime_error("failed to seek this offset");
+    }
+
     DB_file.read(data, PAGE_SIZE);
     
     if (DB_file.fail()) {
@@ -199,11 +209,12 @@ void DiskManager::readPage(int page_id, char*data){
 
 
 
-
 void DiskManager::deletePage(int page_id){
+    //check if found in page_dir
     if(pages_table.find(page_id) == pages_table.end()){
         return;
     }
+    //push to deleted slots, to reuse later
     deleted_slots.push_back(pages_table[page_id]);
     pages_table.erase(page_id);
     
@@ -225,7 +236,9 @@ void DiskManager::resizeFile(){
 
 
 size_t DiskManager::allocatePage(){
-    if(!deleted_slots.empty()){
+
+    //check if there is deleted page to use
+    if(deleted_slots.empty() == false){
         size_t tmp = deleted_slots.back();
         deleted_slots.pop_back();
         return tmp;
@@ -246,6 +259,8 @@ size_t DiskManager::allocatePage(){
     DB_file.flush();    
 
     pages_table[page_id] = offset;
+
+    delete newPage;
 
     return offset;
 }
