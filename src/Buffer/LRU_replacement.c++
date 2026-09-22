@@ -87,6 +87,11 @@ char* LRU::get_frame(int key){
 
 
 int LRU::evict_frame(){
+
+    if(D_tail->prev == D_head){
+        return -1;
+    }
+    
     Frame* evicted_frame = D_tail->prev;
     int frame_id = evicted_frame->key;
     frames_map.erase(frame_id);
