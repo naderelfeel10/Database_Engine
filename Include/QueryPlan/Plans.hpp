@@ -173,4 +173,18 @@ public:
 };
 
 
+class CreateIndexPlan : public AbstractPlanNode{
+
+private:
+    unique_ptr<BoundCreateIndexStatement> bound_create_index;
+
+public:
+
+    CreateIndexPlan(unique_ptr<BoundCreateIndexStatement> statement);
+
+    BoundCreateIndexStatement* getBoundCreateIndex() const;
+    //just printing
+    void PrintTree(int ident) const override;
+};
+
 #endif
