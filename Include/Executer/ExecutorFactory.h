@@ -24,6 +24,7 @@
 #include"TransactionManager/Transaction_manager.h"
 #include"../../parser/external/sql-parser/src/sql/SQLStatement.h"
 #include"Recovery/WAL_manager.h"
+#include"Q_Execution/create_index_operator.h"
 
 //in this executer i will use it to convert from BoundedStmts into actual component i use, then call it's operator
 class ExecutorFactory{

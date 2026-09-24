@@ -6,7 +6,7 @@ WALRecovery::WALRecovery(const char* path){
     //file should exist
     fd = open(
         path,
-        O_RDONLY
+        O_RDONLY | O_CREAT
     );
 
     if(fd == -1){

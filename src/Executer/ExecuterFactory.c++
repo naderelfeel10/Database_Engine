@@ -385,6 +385,40 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             return create_table_executer;
         }
         
+        case PlanType::CREATE_INDEX:{
+
+            CreateIndexPlan* create_index_plan = static_cast<CreateIndexPlan*>(plan);
+
+            string table_name = create_index_plan->getBoundCreateIndex()->table_name;
+            cout<<table_name<<endl;
+
+            TableInfo* table_info = catalog->GetTable(table_name);
+            cout<<table_info->table_name<<endl;
+            TableHeap* table_heap = table_info->get_table_heap();
+
+            //prepare args:
+
+            string index_name = create_index_plan->getBoundCreateIndex()->index_name;
+            string col_name = create_index_plan->getBoundCreateIndex()->columns[0].getColName();
+            int index_size = 200;
+            indexes_t index_type = indexes_t::STATIC_HASH_INDEX;
+
+
+            AbstractExecuter* create_index_executer = new CreateIndex(this->txn_manager, this->wal_manager,
+                                                         table_heap,index_type,col_name,index_size);
+
+            Index* index = table_heap->getIndex(col_name, index_type);
+
+            if(index != nullptr){
+                int first_page_id = table_heap->indexes_pages_ids[pair(col_name, index_type)]->index_first_page_id;
+                this->catalog->AddIndex(table_name, index_name, col_name, index_type, first_page_id);
+            }else{
+                throw runtime_error("error while creating the index");
+            }
+
+            return create_index_executer;
+
+        }
         default:{
             throw runtime_error("invalid planType");
             return nullptr;
@@ -1074,7 +1108,7 @@ string sql;
 BindContext* context = new BindContext();
 TransactionManager* txn_manager = new TransactionManager();
 
-const char* table_name = "wal.bin";
+const char* table_name = "/home/elfeel/Desktop/SWE/Database_Engine/src/Executer/wal.bin";
 WALRecovery* recovery_manager = new WALRecovery(table_name);
 //recovery_manager->~WALRecovery();
 WALManager* wal_manager = new WALManager(catalog, recovery_manager,nullptr,table_name);
@@ -1083,6 +1117,7 @@ ExecutorFactory factory(txn_manager, catalog, context, wal_manager);
 Transaction* curr_txn = txn_manager->get_current_transaction();
 while (true) {
 
+    catalog->printCatalog();
     cout << "\nELFEEL_DB> ";
 
     if (!getline(cin, sql))
@@ -1234,6 +1269,12 @@ while (true) {
 
             case PlanType::CREATE_TABLE: {
                 CreateTable* create_executor = dynamic_cast<CreateTable*>(factory.createExecutor(plan));
+                catalog->printCatalog();
+                break;
+            }
+
+            case PlanType::CREATE_INDEX: {
+                CreateIndex* create_executor = dynamic_cast<CreateIndex*>(factory.createExecutor(plan));
                 catalog->printCatalog();
                 break;
             }
