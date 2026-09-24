@@ -23,6 +23,10 @@ AbstractPlanNode* Planner::Plan(unique_ptr<BoundStatement> statement){
             auto* create_stmt = dynamic_cast<BoundCreateTableStatement*>(statement.release());
             return PlanCreateTable(unique_ptr<BoundCreateTableStatement>(create_stmt));
         }
+        case BoundStatementType::CREATE_INDEX:{
+            auto* create_stmt = dynamic_cast<BoundCreateIndexStatement*>(statement.release());
+            return PlanCreateIndex(unique_ptr<BoundCreateIndexStatement>(create_stmt));
+        }
         default:
             throw runtime_error(" unsupported statement!!!!!!!!!!!");
     }
@@ -107,6 +111,15 @@ AbstractPlanNode* Planner::PlanCreateTable(unique_ptr<BoundCreateTableStatement>
     return new CreateTablePlan(move(statement));
 }
 
+
+AbstractPlanNode* Planner::PlanCreateIndex(unique_ptr<BoundCreateIndexStatement> statement){
+    
+    if(statement == nullptr){
+        throw runtime_error("create stmt is null");
+    }
+
+    return new CreateIndexPlan(move(statement));
+}
 /////////////////////////////////////////////////////////////////////////
 
 

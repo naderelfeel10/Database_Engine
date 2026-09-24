@@ -337,3 +337,24 @@ void CreateTablePlan::PrintTree(int ident) const {
             bound_create_table->PrintTree();
         }
 }
+
+
+CreateIndexPlan::CreateIndexPlan(unique_ptr<BoundCreateIndexStatement> statement):bound_create_index(move(statement)){
+    type = PlanType::CREATE_INDEX;
+}
+
+BoundCreateIndexStatement* CreateIndexPlan::getBoundCreateIndex() const{
+    return bound_create_index.get();
+}
+
+//just printing
+void CreateIndexPlan::PrintTree(int ident) const {
+
+        cout << "|-- CreateTablePlan"
+             << endl;
+
+        if (bound_create_index != nullptr) {
+
+            bound_create_index->PrintTree();
+        }
+}
