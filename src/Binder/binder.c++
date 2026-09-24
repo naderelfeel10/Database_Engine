@@ -34,10 +34,14 @@ unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
             return unique_ptr<BoundStatement>(BindDelete(delete_statement));
 
         }
-        case hsql::kStmtCreate:{
+        /*case hsql::kStmtCreate:{
             auto* create_statement = static_cast<const hsql::CreateStatement*>(statement);
             return unique_ptr<BoundStatement>(bindCreateTable(create_statement));
 
+        }*/
+        case hsql::kStmtCreate:{
+            auto* create_statement = static_cast<const hsql::CreateStatement*>(statement);
+            return unique_ptr<BoundStatement>(bindCreate(create_statement));
         }
         /*
         default:
@@ -874,6 +878,25 @@ FieldType Binder::convertColumnType(const hsql::ColumnType& type){
     }
 }
 
+
+BoundStatement* Binder::bindCreate(const hsql::CreateStatement* statement){
+
+    //check for the type first, then call the needed function
+    switch (statement->type){
+        
+    case hsql::kCreateTable:{
+        return this->bindCreateTable(statement);
+    }
+
+    case hsql::kCreateIndex:{
+        return this->bindCreateIndex(statement);
+    }
+    
+    default:
+        throw runtime_error("create type is undefined");
+        break;
+    }
+}
 BoundCreateTableStatement*Binder::bindCreateTable(const hsql::CreateStatement* statement){
 
     //check if null
@@ -1096,6 +1119,86 @@ BoundCreateTableStatement*Binder::bindCreateTable(const hsql::CreateStatement* s
             }
 
             bound->constraints.push_back(constraint);
+        }
+    }
+
+
+    return bound;
+}
+
+BoundCreateIndexStatement*Binder::bindCreateIndex(const hsql::CreateStatement* statement){
+
+    //we need to fetch index_name, table name, and cols names 
+
+    //check if nullptr
+    if(statement == nullptr){
+        throw runtime_error("stmt is null");
+    }
+
+    //fetch index _name from ast
+    //check if found first
+    if(statement->indexName == nullptr){
+        throw runtime_error("no index name");
+    }
+
+    string index_name = statement->indexName;
+
+    //then bind table_name 
+    if(statement->tableName==nullptr){
+        throw runtime_error("table name is missing");
+    }
+
+    string table_name = statement->tableName;
+
+    if(statement->indexColumns == nullptr){
+        throw runtime_error("index cols is nullptr");
+    }
+    
+    if(statement->indexColumns->empty()){
+        throw runtime_error("index cols size can't be zero");
+    }
+
+    //symantic check
+    //check if table_name is valid
+    TableInfo* table = catalog->GetTable(table_name);
+
+    if(table == nullptr){
+        throw runtime_error(table_name +" table "+"does not exist");
+    }
+
+
+    BoundCreateIndexStatement* bound = new BoundCreateIndexStatement();
+
+    bound->index_name = index_name;
+    bound->table_name = table_name;
+    bound->if_not_exists = statement->ifNotExists;
+
+    //now bind cols 
+
+    unordered_set<string> column_names;
+
+    for(char* column : *statement->indexColumns){
+
+        if (column == nullptr){
+            throw runtime_error("index column cannot be null");
+        }
+
+        string column_name = column;
+
+        //check if the col found in the table first
+        bool found = false;
+
+        for(Column table_column : table->schema){
+            
+            if(table_column.getColName() == column_name){
+                found = true;
+                bound->columns.push_back(table_column);
+                break;
+            }
+        }
+        //if not found, then throw error
+        if(found == false){
+            throw runtime_error("col not found");
         }
     }
 

@@ -12,7 +12,8 @@ enum class BoundStatementType {
     UPDATE,
     DELETE,
     CREATE_TABLE,
-    DROP_TABLE
+    DROP_TABLE,
+    CREATE_INDEX
 };
 
 

@@ -15,9 +15,12 @@
 #include"Q_Execution/SortAggregateExecuter.h"
 #include"Binder/BoundInsertStatement.h"
 #include"../../parser/external/sql-parser/src/sql/InsertStatement.h"
+#include"../../parser/external/sql-parser/src/sql/CreateStatement.h"
 #include"Binder/BoundUpdateStatement.h"
 #include"Binder/BoundDeleteStatement.h"
 #include"Binder/BoundCreateTableStatement.h"
+#include"Binder/BoundCreateIndexStatement.h"
+
 
 using namespace std;
 
@@ -39,7 +42,10 @@ public:
     BoundDeleteStatement* BindDelete(const hsql::DeleteStatement* statement);
 
     //
+    BoundStatement* bindCreate(const hsql::CreateStatement* statement);
     BoundCreateTableStatement* bindCreateTable(const hsql::CreateStatement* statement);
+    BoundCreateIndexStatement* bindCreateIndex(const hsql::CreateStatement* statement);
+    
     FieldType convertColumnType(const hsql::ColumnType& type);
 
     
