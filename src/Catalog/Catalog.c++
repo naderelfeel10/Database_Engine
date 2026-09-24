@@ -167,6 +167,7 @@ TableInfo* Catalog::CreateTable(const BoundCreateTableStatement& statement){
 
     tables.emplace(table_name,info);
     tables_ids_map.emplace(info->table_id, info);
+
     return info;
 }
 
@@ -236,6 +237,57 @@ vector<TableInfo*> Catalog::GetTables(){
         res.push_back(info);
     }
     return res;
+}
+
+
+bool Catalog::AddIndex(string table_name, string index_name, string column_name,
+                       indexes_t index_type, int root_page){
+
+    
+    TableInfo* table = GetTable(table_name);
+
+    if(table == nullptr) {
+        return false;
+    }
+
+    //check if index already exists
+    for(auto&index:table->indexes){
+        if(index.name == index_name){
+            return false;
+        }
+    }
+
+    //set up the inde, then insert into table
+    IndexInfo info;
+
+    info.name = index_name;
+    info.column_name = column_name;
+    info.type = index_type;
+    info.root_page = root_page;
+
+    table->indexes.push_back(info);
+
+    save_catalog();
+
+    return true;
+}
+
+
+IndexInfo* Catalog::GetIndex(string table_name, string index_name){
+    
+    TableInfo* table = GetTable(table_name);
+
+    if(table == nullptr){
+        return nullptr;
+    }
+    //check indexes in this table
+    for(auto& index:table->indexes){
+        if(index.name == index_name){
+            return &index;
+        }
+    }
+
+    return nullptr;
 }
 
 void Catalog::save_catalog(){

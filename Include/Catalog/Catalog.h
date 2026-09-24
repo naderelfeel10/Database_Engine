@@ -97,6 +97,11 @@ class Catalog
         TableInfo* GetTable(string table_name);
         TableInfo* GetTable(int table_id);
         
+        bool AddIndex(string table_name, string index_name, string column_name,
+                         indexes_t index_type, int root_page);
+
+
+        IndexInfo* GetIndex(string table_name, string index_name);
 
         bool TableExists(string table_name);
         bool TableExists(int table_id);
