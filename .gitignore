@@ -1,3 +1,5 @@
+# Build directory
+build/
 # =========================================
 # Build Outputs
 # =========================================
@@ -74,3 +76,40 @@ Thumbs.db
 # Generated Test Files
 # =========================================
 test/*.exe
+
+# Build directory
+build/
+
+# Compiled binaries
+*.o
+*.out
+*.exe
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+
+# Generated libraries
+*.a
+*.so
+*.so.*
+
+# Database/runtime files
+*.db
+*.bin
+*.wal
+
+# Test/runtime executables
+run_tests
+executer
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store

@@ -16,7 +16,7 @@
 #include"seq_scan_operator.h"
 #include"select_operator.h"
 #include"Projection_operator.h"
-#include"Q_Execution\SortAggregateExecuter.h"
+#include"Q_Execution/SortAggregateExecuter.h"
 using namespace std;
 
 /*

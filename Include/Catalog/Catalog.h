@@ -8,8 +8,8 @@
 #include"Storage/Indexing/Index.h"
 #include"Storage/Indexing/StaticHashIndexWrapper.h"
 #include"Storage/Indexing/BPlusTreeIndexWrapper.h"
-#include"Binder\BoundCreateTableStatement.h"
-#include"Storage\Table\Column.h"
+#include"Binder/BoundCreateTableStatement.h"
+#include"Storage/Table/Column.h"
 using namespace std;
 
 

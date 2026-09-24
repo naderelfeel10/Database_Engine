@@ -2,7 +2,7 @@
 #define iterator_H
 
 #include"RID.h"
-#include"tableHeap.h"
+#include"TableHeap.h"
 
 class TableIterator{
 

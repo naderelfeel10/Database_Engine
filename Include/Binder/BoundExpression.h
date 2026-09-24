@@ -2,10 +2,10 @@
 #define BOUND_EXPRESSION_H
 
 
-#include"Storage\Page\Field.h"
-#include"Storage\Table\Column.h"
-#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\sql\Expr.h"
-#include"Q_Execution\SortAggregateExecuter.h"
+#include"Storage/Page/Field.h"
+#include"Storage/Table/Column.h"
+#include"/home/elfeel/Desktop/SWE/Database_Engine/parser/external/sql-parser/src/sql/Expr.h"
+#include"Q_Execution/SortAggregateExecuter.h"
 #include<iostream>
 #include<vector>
 using namespace std;

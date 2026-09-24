@@ -3,7 +3,6 @@
 #define WAL_H
 
 #include <fstream>
-#include <io.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -13,7 +12,6 @@
 #include"Storage/Table/TableHeap.h"
 #include"Catalog/Catalog.h"
 #include"unordered_set"
-#include <share.h>
 
 //an instance of WAL manager creates a wal file on HD, then we append data into it
 class WALManager{

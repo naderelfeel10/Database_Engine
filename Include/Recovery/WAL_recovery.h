@@ -1,14 +1,16 @@
 #ifndef WAL_RECOVERY_H
 #define WAL_RECOVERY_H
 
-#include "Recovery\WAL_record.h"
+#include "Recovery/WAL_record.h"
 
 #include <fcntl.h>
-#include <io.h>
 #include <vector>
 #include <memory>
 #include <stdexcept>
-#include <share.h>
+//#include <share.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 using namespace std;
 
 //from row logs, recover

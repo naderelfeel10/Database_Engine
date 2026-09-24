@@ -9,11 +9,10 @@ WALManager::WALManager(Catalog* catalog, WALRecovery* recovery_manager,TableHeap
     this->catalog = catalog;
 
     cout<<path<<endl;
-    fd = _sopen(
+    fd = open(
         path,
-        _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY,
-        _SH_DENYNO,
-        _S_IREAD | _S_IWRITE
+        O_RDWR | O_CREAT,
+        0644
     );
 
     if (fd == -1) {
@@ -32,7 +31,7 @@ void WALManager::flush(){
     //it forces the os buffer to write the data into HD
     
     //fsync(fd); // works for linux
-    _commit(fd); // same for windos
+    fsync(fd); // same for windos
 }
 
 //serialize the record into a stream of bytes then append it into the end of the log
@@ -44,7 +43,7 @@ void WALManager::add_record(WALRecord& record){
     //serialize 
     record.serialize_WAL_record(buffer);
 
-    int written = _write(fd, buffer, record_size);
+    int written = write(fd, buffer, record_size);
 
     if(written != record_size){
         //delete[] buffer;
@@ -64,11 +63,14 @@ void WALManager::add_record(WALRecord& record){
 //it clears the file after successful commits, so the rest is just data to recover
 void WALManager::clear(){
     //clear then flush
-    if(_chsize(fd, 0) != 0){
+    if (ftruncate(fd, 0) != 0) {
+        cerr << "ftruncate failed\n";
+        cerr << "errno = " << errno << "\n";
+        cerr << "error = " << strerror(errno) << "\n";
         throw runtime_error("failed to clear WAL file");
     }
 
-    if(_commit(fd) != 0){
+    if(fsync(fd) != 0){
         throw runtime_error("failed to flush WAL clear");
     }
 }

@@ -1,7 +1,7 @@
 #ifndef TXN_H
 #define TXN_H
 
-#include"Catalog\Catalog.h"
+#include"Catalog/Catalog.h"
 
 
 //write types the txn should handle in order to apply commiting or rolling back

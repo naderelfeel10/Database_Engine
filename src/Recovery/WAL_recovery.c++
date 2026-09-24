@@ -4,13 +4,17 @@
 WALRecovery::WALRecovery(const char* path){
     cout<<path<<endl;
     //file should exist
-    fd = _sopen(
+    fd = open(
         path,
-        _O_RDONLY | _O_BINARY | _O_CREAT,
-        _SH_DENYNO,
-        _S_IREAD | _S_IWRITE
+        O_RDONLY
     );
+
     if(fd == -1){
+        cout << "WAL open failed\n";
+        cout << "path = [" << path << "]\n";
+        cout << "errno = " << errno << "\n";
+        cout << "error = " << strerror(errno) << endl;
+
         throw runtime_error("file not found");
     }
 }
@@ -22,9 +26,9 @@ vector<WALRecord> WALRecovery::read_all_records() {
 
     vector<WALRecord> records;
     //compute file size
-    struct _stat file_info{};
+    struct stat file_info{};
 
-    if(_fstat(fd, &file_info) == -1){
+    if(fstat(fd, &file_info) == -1){
         throw runtime_error("can't get wal size");
     }
 
@@ -38,7 +42,7 @@ vector<WALRecord> WALRecovery::read_all_records() {
     //read the all data in the file, then keep deserializing records till it ends
     vector<char> buffer(file_size);
 
-    int bytes_read = _read(fd,buffer.data(),static_cast<unsigned int>(file_size));
+    int bytes_read = read(fd,buffer.data(),static_cast<unsigned int>(file_size));
 
     cout<<bytes_read<<endl;
 
@@ -77,7 +81,7 @@ vector<WALRecord> WALRecovery::read_all_records() {
 
 WALRecovery::~WALRecovery(){
     if(fd != -1){
-        _close(fd);
+        close(fd);
         fd = -1;
     }
 }
