@@ -3,25 +3,47 @@
 
 vector<int> column_names_to_indexes(vector<string> names, vector<Column> schema);
 
-Catalog::Catalog(BufferPoolManager* BPM, bool createNew):BPM(BPM){
+Catalog::Catalog(BufferPoolManager* catalog_BPM, BufferPoolManager* DB_BPM, bool createNew){
 
-    if(createNew){
-        // allocate a page for first and last  page
-        this->catalog_first_page_id = this->BPM->newPage();
-        this->catalog_last_page_id = this->BPM->newPage();
-
-        cout<<"first page id : "<<catalog_first_page_id<<endl;;
-        cout<<"last page id : "<<catalog_last_page_id<<endl;
-
-        //update next pointer of  first page to the last one
-        char* buffer = this->BPM->fetchPage(catalog_first_page_id);
-        PageHeader* header = reinterpret_cast<PageHeader*>(buffer);
-
-        header->next_page_id = catalog_last_page_id;
-        //mark as dirty just to be saved to disk later
-        this->BPM->markAsDirty(catalog_first_page_id);
+    this->catalog_BPM = catalog_BPM;
+    this->DB_BPM = DB_BPM;
     
+    if(createNew){
+
+        // allocate a page for first and last  page
+        this->catalog_first_page_id = this->catalog_BPM->newPage();
+        //this->catalog_last_page_id = this->catalog_BPM->newPage();
+        
+        cout<<"first page id : "<<catalog_first_page_id<<endl;;
+
+        save_catalog();
+
+    }else{
+        //load the catalog
+        load_catalog(1);
     }
+
+}
+
+void Catalog::save_catalog(){
+
+        //save table_meta data : 
+        char* page_buffer = catalog_BPM->fetchPage(catalog_first_page_id);
+
+        int offset{};
+
+        memcpy(page_buffer + offset, &catalog_first_page_id, sizeof(catalog_first_page_id));
+        offset += sizeof(catalog_first_page_id);
+
+        memcpy(page_buffer + offset, &next_table_id, sizeof(next_table_id));
+        offset += sizeof(next_table_id);
+
+        int num_of_tables = this->tables.size();
+        memcpy(page_buffer + offset, &num_of_tables, sizeof(num_of_tables));
+        offset += sizeof(num_of_tables);
+
+        catalog_BPM->markAsDirty(catalog_first_page_id);
+
 }
 /*
 TableInfo* Catalog::CreateTable(string table_name, vector<Column>schema){
@@ -62,7 +84,7 @@ TableInfo* Catalog::CreateTable(const string& table_name,const vector<Column>& s
     }
 
     //create the physical table storage
-    TableHeap* heap = new TableHeap(BPM, -1, -1);
+    TableHeap* heap = new TableHeap(DB_BPM, -1, -1);
 
     //configure table heap by setting the name and schema
     heap->setTableName(table_name);
@@ -81,6 +103,14 @@ TableInfo* Catalog::CreateTable(const string& table_name,const vector<Column>& s
 
     tables[table_name] = info;
     tables_ids_map[info->table_id] = info;
+
+    //save to the disk: 
+    int table_page_id = catalog_BPM->newPage();
+    char* page_buffer = catalog_BPM->fetchPage(table_page_id);
+
+    info->serializeTableInfo(page_buffer);
+    catalog_BPM->markAsDirty(table_page_id);
+
 
     return info;
 }
@@ -111,7 +141,7 @@ TableInfo* Catalog::CreateTable(const BoundCreateTableStatement& statement){
         throw runtime_error("empty schema");
     }
     //create tableheap to be represented on hd
-    TableHeap* heap =new TableHeap(BPM, -1, -1);
+    TableHeap* heap = new TableHeap(DB_BPM, -1, -1);
 
     heap->setTableName(table_name);
     heap->setCols(statement.columns);
@@ -167,6 +197,13 @@ TableInfo* Catalog::CreateTable(const BoundCreateTableStatement& statement){
 
     tables.emplace(table_name,info);
     tables_ids_map.emplace(info->table_id, info);
+
+    //save to the disk: 
+    int table_page_id = catalog_BPM->newPage();
+    char* page_buffer = catalog_BPM->fetchPage(table_page_id);
+
+    info->serializeTableInfo(page_buffer);
+    catalog_BPM->markAsDirty(table_page_id);
 
     return info;
 }
@@ -290,6 +327,7 @@ IndexInfo* Catalog::GetIndex(string table_name, string index_name){
     return nullptr;
 }
 
+/*
 void Catalog::save_catalog(){
     //create a buffer to serialize data into
     char* buffer = new char[PAGE_SIZE];
@@ -303,10 +341,6 @@ void Catalog::save_catalog(){
     memcpy(buffer+index, &catalog_first_page_id, sizeof(catalog_first_page_id));
     index += sizeof(catalog_first_page_id);
     
-    //save last_page_id
-    memcpy(buffer+index, &catalog_last_page_id, sizeof(catalog_last_page_id));
-    index += sizeof(catalog_last_page_id);
-
     //save tables size
     int number_of_tables = tables.size();
     cout<<number_of_tables<<endl;
@@ -329,11 +363,13 @@ void Catalog::save_catalog(){
     delete[]buffer;
 
 }
+*/
 
 void Catalog::load_catalog(int page_id=1){
+    
     //load the page 
     //by default it's the second page in the whole file (page_id =1)
-    char* buffer = this->BPM->fetchPage(page_id);
+    char* buffer = this->catalog_BPM->fetchPage(page_id);
     int offset{0};
     cout << "Loading from page: " << page_id << endl;
     //load data 
@@ -342,9 +378,9 @@ void Catalog::load_catalog(int page_id=1){
     memcpy(&this->catalog_first_page_id,buffer+offset, sizeof(catalog_first_page_id));
     offset += sizeof(catalog_first_page_id);
 
-    //load last_page_id
-    memcpy(&this->catalog_last_page_id,buffer+offset, sizeof(catalog_last_page_id));
-    offset += sizeof(catalog_last_page_id);
+    //load last_table_id
+    memcpy(&this->next_table_id,buffer+offset, sizeof(next_table_id));
+    offset += sizeof(next_table_id);
 
     //load tables size
     int number_of_tables;
@@ -352,19 +388,28 @@ void Catalog::load_catalog(int page_id=1){
     offset += sizeof(number_of_tables);
 
     cout<<"number of tables : "<<number_of_tables<<endl;
+
     tables.clear();
     tables_ids_map.clear();
-    //laod actual table 
-    for(int i=0;i<number_of_tables;i++){
+
+    for(int i{catalog_first_page_id};i<=number_of_tables;i++){
+
         TableInfo* table_info = new TableInfo();
-        table_info->loadTableInfo(buffer+offset);
-        offset+=table_info->getSize();
 
-        string table_name=  table_info->table_name;
+        //fetch the page the table allocated in :
+        char* page_buffer = catalog_BPM->fetchPage(i+1);
+        table_info->loadTableInfo(DB_BPM ,page_buffer);
+
+        int table_id = table_info->table_id;
+        string table_name = table_info->table_name;
+        
+        cout<<"table id : "<< table_id<<endl;
+        cout<<"table name : "<< table_name<<endl;
+
+        //add to the catalog
+        tables_ids_map[table_id] = table_info;
         tables[table_name] = table_info;
-        tables_ids_map[table_info->table_id] = table_info;
     }
-
 }
 
 
@@ -613,7 +658,8 @@ void TableInfo::printTableInfo(){
 
         }
 
-        void TableInfo::loadTableInfo(char *buffer){
+        void TableInfo::loadTableInfo(BufferPoolManager* BPM ,char *buffer){
+        
             offset = 0;
         
             int len;
@@ -624,10 +670,11 @@ void TableInfo::printTableInfo(){
             //load table name
             table_name.assign(buffer + offset, len);
             offset += len;
-        
+            
             //load table_id
             memcpy(&table_id, buffer + offset, sizeof(table_id));
             offset += sizeof(table_id);
+
 
             //load the first page id
             memcpy(&first_page_id, buffer + offset, sizeof(first_page_id));
@@ -682,21 +729,40 @@ void TableInfo::printTableInfo(){
                 offset += idx.getSize();
                 indexes.push_back(idx);
             }
+            this->table_heap = new TableHeap(BPM, first_page_id, -1);
         }
 
-        int TableInfo::getSize(){return offset;}
+        
+int TableInfo::getSize(){return offset;}
 
+Catalog::~Catalog(){
+    this->save_catalog();
+    for(auto&[id,table_info] : this->tables_ids_map){
+        TableHeap* table_heap = table_info->get_table_heap();
+        table_heap->saveMetaData();
+    }
+}
+
+
+
+    
 /*
 int
 main(){
 
     
     
-    DiskManager* dm = new DiskManager("catalog.db");
-    BufferPoolManager* BPM = new BufferPoolManager(dm);
+    DiskManager* catalog_dm = new DiskManager("catalog.db");
+    BufferPoolManager* catalog_BPM = new BufferPoolManager(catalog_dm);
 
-    Catalog* catalog = new Catalog(BPM, true);
+    DiskManager* DB_dm = new DiskManager("DB.db");
+    BufferPoolManager* DB_BPM = new BufferPoolManager(DB_dm);
 
+    bool is_new = catalog_dm->get_is_new();
+    Catalog* catalog = new Catalog(catalog_BPM, DB_BPM, is_new);
+
+    if(is_new == true){
+    
     string table_name = "User";
 
     Column t1_col1 = Column(TYPE_INT, "user_id", sizeof(int));
@@ -724,21 +790,12 @@ main(){
     
      
     //delete catalog;
-    BPM->~BufferPoolManager();
-    dm->~DiskManager();
-    
-    
-   */
+    catalog_BPM->~BufferPoolManager();
+    DB_BPM->~BufferPoolManager();
 
-    /*
-    DiskManager* dm2 = new DiskManager("catalog.db");
-    BufferPoolManager* BPM2 = new BufferPoolManager(dm2);
+    }else{
 
-    Catalog* catalog2 = new Catalog(BPM2, false);
-    //retest after loading
-    catalog2->load_catalog();
-
-    for(auto&[table_name, table_info]: catalog2->getTables()){
+    for(auto&[table_name, table_info]: catalog->getTables()){
         cout<<table_name<<endl;
         cout<<table_info->table_name<<endl;
         for(auto&col: table_info->schema){
@@ -748,7 +805,7 @@ main(){
     }
     cout<<"--------------"<<endl;
 
-    */
-    
+    }
 
-//}
+}
+*/

@@ -1122,6 +1122,7 @@ BoundCreateTableStatement*Binder::bindCreateTable(const hsql::CreateStatement* s
         }
     }
 
+    catalog->CreateTable(*bound);
 
     return bound;
 }

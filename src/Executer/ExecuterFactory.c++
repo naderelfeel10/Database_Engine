@@ -380,6 +380,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             AbstractExecuter* create_table_executer = new CreateTable(catalog, *create_plan->getBoundCreateTable());
             cout<<static_cast<CreateTable*>(create_table_executer)->is_created()<<endl;
 
+            
             //TODO : create a createTable executer and return it (done)
             //return just null for now
             return create_table_executer;
@@ -855,14 +856,19 @@ void InsertIntoOrdersTable(TableHeap* orders_table) {
         }
     }
 }
+
 /*
 int
 main(){
 
-    DiskManager* dm = new DiskManager("catalog.db");
-    BufferPoolManager* BPM = new BufferPoolManager(dm);
+    DiskManager* catalog_dm = new DiskManager("catalog.db");
+    BufferPoolManager* catalog_BPM = new BufferPoolManager(catalog_dm);
 
-    Catalog* catalog = new Catalog(BPM, true);
+    DiskManager* DB_dm = new DiskManager("DB.db");
+    BufferPoolManager* DB_BPM = new BufferPoolManager(DB_dm);
+
+    bool is_new = catalog_dm->get_is_new();
+    Catalog* catalog = new Catalog(catalog_BPM, DB_BPM, is_new);
 
     vector<Column>user_schema = CreateUserSchema();
     catalog->CreateTable("User", user_schema);
@@ -942,17 +948,22 @@ main(){
 
 }
 */
-
 //main rewrite
 
 int main()
 {
-    DiskManager* dm = new DiskManager("catalog.db");
+    //create file for catalog
+    DiskManager* catalog_dm = new DiskManager("catalog.bin");
+    BufferPoolManager* catalog_BPM = new BufferPoolManager(catalog_dm);
 
-    BufferPoolManager* BPM = new BufferPoolManager(dm);
+    //create file for the database 
+    DiskManager* DB_dm = new DiskManager("DB.bin");
+    BufferPoolManager* DB_BPM = new BufferPoolManager(DB_dm);
 
-    Catalog* catalog = new Catalog(BPM, true);
+    bool is_new = catalog_dm->get_is_new();
+    Catalog* catalog = new Catalog(catalog_BPM, DB_BPM, is_new);
 
+    /*
     vector<Column> user_schema = CreateUserSchema();
 
     TableInfo* user_info =catalog->CreateTable("User", user_schema);
@@ -979,6 +990,7 @@ int main()
     }
 
     TableHeap* order_table = orders_info->table_heap;
+    */
 
     //InsertIntoOrdersTable(order_table);
 
@@ -1115,6 +1127,7 @@ WALManager* wal_manager = new WALManager(catalog, recovery_manager,nullptr,table
 wal_manager->recover();
 ExecutorFactory factory(txn_manager, catalog, context, wal_manager);
 Transaction* curr_txn = txn_manager->get_current_transaction();
+
 while (true) {
 
     catalog->printCatalog();
@@ -1379,6 +1392,8 @@ while (true) {
                 }
             
         }
+
+
     }
 
         catch (const exception& e) {
@@ -1387,6 +1402,17 @@ while (true) {
              << e.what()
              << endl;
     }
+
+
+
 }
+
+    std::ofstream ofs;
+    ofs.open("wal.bin", std::ofstream::out | std::ofstream::trunc);
+    ofs.close();
+
+    catalog->~Catalog();
+    catalog_BPM->~BufferPoolManager();
+    DB_BPM->~BufferPoolManager();
 
 }

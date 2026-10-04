@@ -197,6 +197,7 @@ BufferPoolManager::~BufferPoolManager(){
         if(frames[i]!=nullptr)
             delete[] frames[i];
     }
+    this->disk_manager->~DiskManager();
     cout<<"BPM is deleted"<<endl;
 
 }

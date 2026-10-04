@@ -15,13 +15,37 @@ DiskManager::DiskManager(const string&file_name){
 
     // if does not exist create new one
     if(!DB_file.is_open()){
-        DB_file.open(file_name, std::ios::binary | std::ios::trunc | std::ios::out | std::ios::in);
+        
+        DB_file.clear();
+
+        /*DB_file.open(file_name, std::ios::binary | std::ios::trunc | std::ios::out | std::ios::in);
         if(!DB_file.is_open()){
             cerr <<("Can't open the DB_file");
         }else{
             cout<<"new file is created successfuly"<<endl;
         }
+        */
+
+        {
+            ofstream new_file(file_name, ios::binary | ios::trunc);
+
+            if (!new_file.is_open()) {
+                throw runtime_error("Can't create DB file");
+            }
+        
+        }
+
+        is_file_new = true;
         filesystem::resize_file(file_name, header.capacity*PAGE_SIZE);
+
+        DB_file.open(file_name, ios::binary | ios::in | ios::out);
+
+        if(!DB_file.is_open()){
+            throw runtime_error("can't reopen DB file");
+        }
+        
+        cout<<"new file is created successfuly"<<endl;
+
         saveMetaData();
     }else{
 
