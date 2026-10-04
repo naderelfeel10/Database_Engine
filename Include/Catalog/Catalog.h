@@ -57,7 +57,8 @@ public:
         vector<int> primary_key_columns;
 
         void serializeTableInfo(char* buffer);
-        void loadTableInfo(char *buffer);
+        //void loadTableInfo(char *buffer);
+        void loadTableInfo(BufferPoolManager* BPM ,char *buffer);
         int getSize();
    
         TableHeap*get_table_heap(){
@@ -74,16 +75,18 @@ class Catalog
         // table_name : table_info
         unordered_map<string,TableInfo*> tables;
         unordered_map<int,TableInfo*> tables_ids_map;
-        BufferPoolManager* BPM;
+        
+        BufferPoolManager* catalog_BPM;
+        BufferPoolManager* DB_BPM;
+
         int next_table_id{0};
         int catalog_first_page_id{-1};
-        int catalog_last_page_id{-1};
 
         //int number_of_tables;
 
 
     public:
-        Catalog(BufferPoolManager* BPM, bool createNew);
+        Catalog(BufferPoolManager* catalog_BPM, BufferPoolManager* DB_BPM, bool createNew);
 
         TableInfo* CreateTable(const string& table_name, const vector<Column>&schema);
         TableInfo* CreateTable(const BoundCreateTableStatement& statement);
@@ -114,9 +117,10 @@ class Catalog
             return this->tables;
         }
         BufferPoolManager* getBPM(){
-            return this->BPM;
+            return this->catalog_BPM;
         }
 
+        ~Catalog();
 
 };
 

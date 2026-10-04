@@ -62,6 +62,9 @@ class TableHeap{
         BufferPoolManager* BPM;
         TableHeap(BufferPoolManager* BPM,int first_page_id, int last_page_id);
         
+        TableHeap(BufferPoolManager* BPM, int table_id, string table_name, int first_page_id, vector<Column>cols):
+        BPM(BPM), table_id(table_id), table_name(table_name), first_page_id(first_page_id), cols(cols){};
+
         //crud :
         RID insertTuple(Tuple tuple);
         RID updateTuple(RID rid, Tuple tuple);

@@ -37,7 +37,7 @@ class DiskManager{
         void resizeFile();        
         auto getFileSize(const string&file_name);
     
-        
+        bool is_file_new{false};
     //public:
         fstream DB_file;
         DiskManager(const string&file_name);
@@ -50,7 +50,9 @@ class DiskManager{
         size_t allocatePage();
         
         size_t getSize();
-
+        bool get_is_new(){
+            return this->is_file_new;
+        }
         void addTable(string table_name, int first_page_id);
         void removeTable(string table_name);
 

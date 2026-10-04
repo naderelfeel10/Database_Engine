@@ -4,9 +4,9 @@ using namespace std;
 
 
 CreateTable::CreateTable(Catalog* catalog, const BoundCreateTableStatement& statement): catalog(catalog){
-    if(this->catalog->CreateTable(statement)){
+    //if(this->catalog->CreateTable(statement)){
         created=true;
-    }
+    //}
 }
 bool CreateTable::is_created(){return this->created;}
 

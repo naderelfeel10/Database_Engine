@@ -1,5 +1,7 @@
 #include"Executer/ExecutorFactory.h"
 #include<iostream>
+#include <fstream>
+#include <string>
 using namespace std;
 
 
@@ -950,18 +952,415 @@ main(){
 */
 //main rewrite
 
-int main()
-{
+
+DiskManager* catalog_dm;
+BufferPoolManager* catalog_BPM;
+DiskManager* DB_dm;
+BufferPoolManager* DB_BPM;
+Catalog* catalog;
+
+string database_name="NULL";
+
+BindContext* context = new BindContext();
+TransactionManager* txn_manager = new TransactionManager();
+
+const char* wal_file_name = "/home/elfeel/Desktop/SWE/Database_Engine/src/Executer/wal.bin";
+WALRecovery* recovery_manager ;
+WALManager* wal_manager;
+ExecutorFactory* factory;
+Transaction* curr_txn;
+
+
+void setup_database(){
+ 
+    if(catalog && catalog_BPM && DB_BPM){
+            catalog->~Catalog();
+            catalog_BPM->~BufferPoolManager();
+            DB_BPM->~BufferPoolManager();
+    }
+    
     //create file for catalog
-    DiskManager* catalog_dm = new DiskManager("catalog.bin");
-    BufferPoolManager* catalog_BPM = new BufferPoolManager(catalog_dm);
+    catalog_dm = new DiskManager(database_name+"_catalog.bin");
+    catalog_BPM = new BufferPoolManager(catalog_dm);
 
     //create file for the database 
-    DiskManager* DB_dm = new DiskManager("DB.bin");
-    BufferPoolManager* DB_BPM = new BufferPoolManager(DB_dm);
+    DB_dm = new DiskManager(database_name);
+    DB_BPM = new BufferPoolManager(DB_dm);
 
     bool is_new = catalog_dm->get_is_new();
-    Catalog* catalog = new Catalog(catalog_BPM, DB_BPM, is_new);
+    catalog = new Catalog(catalog_BPM, DB_BPM, is_new);
+
+
+    context = new BindContext();
+    txn_manager = new TransactionManager();
+    
+    recovery_manager = new WALRecovery(wal_file_name);
+    
+    wal_manager = new WALManager(catalog, recovery_manager,nullptr,wal_file_name);
+    wal_manager->recover();
+    
+    factory = new ExecutorFactory(txn_manager, catalog, context, wal_manager);
+    curr_txn = txn_manager->get_current_transaction();
+}
+
+int main()
+{
+
+
+//setup_database();
+string  sql;
+
+while (true) {
+
+    cout << "\nELFEEL_DB> ";
+
+    if (!getline(cin, sql))
+        break;
+
+    // Ignore empty input
+    if (sql.empty())
+        continue;
+
+    // Optional: exit command
+    if (sql == "exit" || sql == "quit")
+        break;
+
+
+    
+    string sql_copy = sql;
+    transform(sql_copy.begin(), sql_copy.end(), sql_copy.begin(), ::tolower);
+    
+    stringstream ss(sql_copy);
+
+    string command;
+    string object;
+    string databaseName;
+
+    ss>>command>>object>>databaseName;    
+
+    cout<<command<<object<<databaseName<<endl;
+
+    if(command == "connect"){
+        
+        database_name = object;
+        
+        ifstream databases_file("databases.txt");
+        string line;
+        bool is_found = false;
+        while(getline(databases_file, line)){
+            cout<<line<<endl;
+            if(line == object){
+                setup_database();
+                is_found = true;
+            }
+        }
+
+        //database is not found in the system
+        if(is_found == false){
+            cout<<"database name is not found"<<endl;
+        }
+
+        databases_file.close();
+        continue;
+    }
+
+    //if the user is creating a new database instance, then save the old one then create the new one 
+    if(command == "create" && object == "database"){
+
+        database_name = databaseName;
+
+        setup_database();
+
+        ofstream databases_file("databases.txt", ios::app);
+        databases_file<<databaseName<<'\n';
+        databases_file.close();
+
+        continue;
+    }
+    
+    if(database_name == "NULL"){
+        cout<<"please select a database";
+        continue;
+    }
+
+
+    try {
+
+        // ============================================================
+        // 1. Parse
+        // ============================================================
+
+        hsql::SQLParserResult result;
+
+        hsql::SQLParser::parse(sql, &result);
+
+        if (result.size() == 0) {
+            cout << "No SQL statement found." << endl;
+            continue;
+        }
+
+
+        // ============================================================
+        // 2. Bind
+        // ============================================================
+
+
+
+
+        Binder* binder = new Binder(catalog, context);
+
+        const hsql::SQLStatement* stmt = result.getStatement(0);
+        curr_txn = txn_manager->get_current_transaction();
+        if(stmt->type() == hsql::kStmtTransaction){
+            bool is_txn = factory->execute_txn(stmt);
+            curr_txn = txn_manager->get_current_transaction();
+            if(is_txn){
+                continue;
+            }
+        }
+        else if(curr_txn==nullptr){
+            cout<<"curr txn is null"<<endl;
+            if(stmt->type() == hsql::kStmtInsert || stmt->type() == hsql::kStmtUpdate || stmt->type() == hsql::kStmtDelete){
+
+                txn_manager->begin();
+                curr_txn = txn_manager->get_current_transaction();
+                int txn_id = curr_txn->GetTransactionId();
+                WALRecord record{LogType::BEGIN, txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
+                wal_manager->add_record(record);
+
+            }
+
+        }
+
+        unique_ptr<BoundStatement> bound_stmt =
+            binder->bind(stmt);
+
+
+        // ============================================================
+        // Debug: Binding information
+        // ============================================================
+
+        cout << "\nTables in Bind Context: "
+             << context->tables.size()
+             << endl;
+
+        for (auto& table : context->tables) {
+            table.printTable();
+        }
+
+        cout << "\n"
+             << "================================================================================================="
+             << endl;
+
+        bound_stmt->PrintTree();
+
+        cout << "\n"
+             << "================================================================================================="
+             << endl;
+
+
+        // ============================================================
+        // 3. Create Plan
+        // ============================================================
+
+        Planner* planner = new Planner();
+
+        AbstractPlanNode* plan =
+            planner->Plan(move(bound_stmt));
+
+
+        // ============================================================
+        // 4. Print Plan
+        // ============================================================
+
+        plan->PrintTree();
+
+
+        // ============================================================
+        // 5. Create Executor
+        // ============================================================
+
+
+        //AbstractExecuter* executor = factory.createExecutor(plan);
+
+
+        // ============================================================
+        // 6. Execute
+        // ============================================================
+
+        cout << "\n========== output ==========\n";
+
+    //AbstractExecuter* executor = factory.createExecutor(plan);
+
+        switch (plan->type){
+        
+            case PlanType::INSERT:{
+                InsertTuple* insert_executor = dynamic_cast<InsertTuple*>(factory->createExecutor(plan));
+            
+                insert_executor->open();
+            
+                if (insert_executor->is_inserted()) {
+                    cout << "1 row inserted successfully.\n";
+                    insert_executor->get_tuple().print();
+                }
+            
+                insert_executor->close();
+                break;
+            }
+        
+        
+            case PlanType::UPDATE: {
+                UpdateTuple* update_executor = dynamic_cast<UpdateTuple*>(factory->createExecutor(plan));
+
+                break;
+            }
+            case PlanType::DELETE: {
+                DeleteTuple* delete_executor = dynamic_cast<DeleteTuple*>(factory->createExecutor(plan));
+
+                break;
+            }
+
+            case PlanType::CREATE_TABLE: {
+                CreateTable* create_executor = dynamic_cast<CreateTable*>(factory->createExecutor(plan));
+                catalog->printCatalog();
+                break;
+            }
+
+            case PlanType::CREATE_INDEX: {
+                CreateIndex* create_executor = dynamic_cast<CreateIndex*>(factory->createExecutor(plan));
+                catalog->printCatalog();
+                break;
+            }
+        case PlanType::SEQ_SCAN: {
+        
+            SeqScan* seq_scan_executor = dynamic_cast<SeqScan*>(factory->createExecutor(plan));
+
+        
+            seq_scan_executor->open();
+        
+            cout << "\n========== output ==========\n";
+        
+            for (auto& col : seq_scan_executor->get_output_schema()) {
+                cout << col.getColName() << "   | ";
+            }
+        
+            cout << '\n';
+        
+            Tuple tuple({});
+        
+            while (seq_scan_executor->getNext(&tuple)) {
+                tuple.print();
+            }
+        
+            seq_scan_executor->close();
+        
+            cout << "=============================\n";
+        
+            break;
+        }
+
+
+        case PlanType::PROJECTION: {
+        
+            Projection* projection_executor = dynamic_cast<Projection*>(factory->createExecutor(plan));
+
+            projection_executor->open();
+        
+            cout << "\n========== output ==========\n";
+        
+            for (auto& col : projection_executor->get_output_schema()) {
+                cout << col.getColName() << "   | ";
+            }
+        
+            cout << '\n';
+        
+            Tuple tuple({});
+        
+            while (projection_executor->getNext(&tuple)) {
+                tuple.print();
+            }
+        
+            projection_executor->close();
+        
+            cout << "=============================\n";
+        
+            break;
+        }
+
+
+        case PlanType::FILTER: {
+        
+            Select* filter_executor = dynamic_cast<Select*>(factory->createExecutor(plan));
+        
+            filter_executor->open();
+        
+            cout << "\n========== output ==========\n";
+        
+            for (auto& col : filter_executor->get_output_schema()) {
+                cout << col.getColName() << "   | ";
+            }
+        
+            cout << '\n';
+        
+            Tuple tuple({});
+        
+            while (filter_executor->getNext(&tuple)) {
+                tuple.print();
+            }
+        
+            filter_executor->close();
+        
+            cout << "=============================\n";
+        
+            break;
+        }
+        
+            default:
+                cout << "Unsupported plan type.\n";
+                break;
+        }
+
+
+        if(stmt->type() != hsql::kStmtTransaction){
+                if(stmt->type() == hsql::kStmtInsert || stmt->type() == hsql::kStmtUpdate || stmt->type() == hsql::kStmtDelete){
+            
+                    curr_txn = txn_manager->get_current_transaction();
+                    int txn_id = curr_txn->GetTransactionId();
+                    txn_manager->commit(curr_txn);
+                    WALRecord record{LogType::COMMIT,txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
+                    wal_manager->add_record(record);
+                }
+            
+        }
+
+
+    }
+
+        catch (const exception& e) {
+
+        cout << "\nExecution Error: "
+             << e.what()
+             << endl;
+    }
+
+
+
+}
+
+    std::ofstream ofs;
+    ofs.open("wal.bin", std::ofstream::out | std::ofstream::trunc);
+    ofs.close();
+
+    catalog->~Catalog();
+    catalog_BPM->~BufferPoolManager();
+    DB_BPM->~BufferPoolManager();
+
+
+
+}
+
+
+
 
     /*
     vector<Column> user_schema = CreateUserSchema();
@@ -994,6 +1393,7 @@ int main()
 
     //InsertIntoOrdersTable(order_table);
 
+    /*
     cout<<"\n==========CATALOG=========="<<endl;
 
     for (auto& [table_name, table_info] : catalog->getTables()) {
@@ -1008,7 +1408,7 @@ int main()
     }
 
     cout<<"=============================\n";
-
+    */
     /*
 
     //const std::string sql = "SELECT u.user_id, u.firstName from User as u "
@@ -1112,307 +1512,8 @@ int main()
 
 
 
-string sql;
+//string sql;
 //string sql = "CREATE TABLE students (name TEXT, student_number INTEGER, city TEXT, grade DOUBLE);";
 
 //string sql = "CREATE TABLE students (name TEXT, student_number INTEGER NOT NULL, city TEXT, grade DOUBLE PRIMARY KEY UNIQUE);";
 //string sql = "insert into students (name, student_number, city, grade) values ('nader', 1, 'cairo', 3.12);";
-BindContext* context = new BindContext();
-TransactionManager* txn_manager = new TransactionManager();
-
-const char* table_name = "/home/elfeel/Desktop/SWE/Database_Engine/src/Executer/wal.bin";
-WALRecovery* recovery_manager = new WALRecovery(table_name);
-//recovery_manager->~WALRecovery();
-WALManager* wal_manager = new WALManager(catalog, recovery_manager,nullptr,table_name);
-wal_manager->recover();
-ExecutorFactory factory(txn_manager, catalog, context, wal_manager);
-Transaction* curr_txn = txn_manager->get_current_transaction();
-
-while (true) {
-
-    catalog->printCatalog();
-    cout << "\nELFEEL_DB> ";
-
-    if (!getline(cin, sql))
-        break;
-
-    // Ignore empty input
-    if (sql.empty())
-        continue;
-
-    // Optional: exit command
-    if (sql == "exit" || sql == "quit")
-        break;
-
-    try {
-
-        // ============================================================
-        // 1. Parse
-        // ============================================================
-
-        hsql::SQLParserResult result;
-
-        hsql::SQLParser::parse(sql, &result);
-
-        if (result.size() == 0) {
-            cout << "No SQL statement found." << endl;
-            continue;
-        }
-
-
-        // ============================================================
-        // 2. Bind
-        // ============================================================
-
-
-
-
-        Binder* binder = new Binder(catalog, context);
-
-        const hsql::SQLStatement* stmt = result.getStatement(0);
-        curr_txn = txn_manager->get_current_transaction();
-        if(stmt->type() == hsql::kStmtTransaction){
-            bool is_txn = factory.execute_txn(stmt);
-            curr_txn = txn_manager->get_current_transaction();
-            if(is_txn){
-                continue;
-            }
-        }
-        else if(curr_txn==nullptr){
-            cout<<"curr txn is null"<<endl;
-            if(stmt->type() == hsql::kStmtInsert || stmt->type() == hsql::kStmtUpdate || stmt->type() == hsql::kStmtDelete){
-
-                txn_manager->begin();
-                curr_txn = txn_manager->get_current_transaction();
-                int txn_id = curr_txn->GetTransactionId();
-                WALRecord record{LogType::BEGIN, txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
-                wal_manager->add_record(record);
-
-            }
-
-        }
-
-        unique_ptr<BoundStatement> bound_stmt =
-            binder->bind(stmt);
-
-
-        // ============================================================
-        // Debug: Binding information
-        // ============================================================
-
-        cout << "\nTables in Bind Context: "
-             << context->tables.size()
-             << endl;
-
-        for (auto& table : context->tables) {
-            table.printTable();
-        }
-
-        cout << "\n"
-             << "================================================================================================="
-             << endl;
-
-        bound_stmt->PrintTree();
-
-        cout << "\n"
-             << "================================================================================================="
-             << endl;
-
-
-        // ============================================================
-        // 3. Create Plan
-        // ============================================================
-
-        Planner* planner = new Planner();
-
-        AbstractPlanNode* plan =
-            planner->Plan(move(bound_stmt));
-
-
-        // ============================================================
-        // 4. Print Plan
-        // ============================================================
-
-        plan->PrintTree();
-
-
-        // ============================================================
-        // 5. Create Executor
-        // ============================================================
-
-
-        //AbstractExecuter* executor = factory.createExecutor(plan);
-
-
-        // ============================================================
-        // 6. Execute
-        // ============================================================
-
-        cout << "\n========== output ==========\n";
-
-    //AbstractExecuter* executor = factory.createExecutor(plan);
-
-        switch (plan->type){
-        
-            case PlanType::INSERT:{
-                InsertTuple* insert_executor = dynamic_cast<InsertTuple*>(factory.createExecutor(plan));
-            
-                insert_executor->open();
-            
-                if (insert_executor->is_inserted()) {
-                    cout << "1 row inserted successfully.\n";
-                    insert_executor->get_tuple().print();
-                }
-            
-                insert_executor->close();
-                break;
-            }
-        
-        
-            case PlanType::UPDATE: {
-                UpdateTuple* update_executor = dynamic_cast<UpdateTuple*>(factory.createExecutor(plan));
-
-                break;
-            }
-            case PlanType::DELETE: {
-                DeleteTuple* delete_executor = dynamic_cast<DeleteTuple*>(factory.createExecutor(plan));
-
-                break;
-            }
-
-            case PlanType::CREATE_TABLE: {
-                CreateTable* create_executor = dynamic_cast<CreateTable*>(factory.createExecutor(plan));
-                catalog->printCatalog();
-                break;
-            }
-
-            case PlanType::CREATE_INDEX: {
-                CreateIndex* create_executor = dynamic_cast<CreateIndex*>(factory.createExecutor(plan));
-                catalog->printCatalog();
-                break;
-            }
-        case PlanType::SEQ_SCAN: {
-        
-            SeqScan* seq_scan_executor = dynamic_cast<SeqScan*>(factory.createExecutor(plan));
-
-        
-            seq_scan_executor->open();
-        
-            cout << "\n========== output ==========\n";
-        
-            for (auto& col : seq_scan_executor->get_output_schema()) {
-                cout << col.getColName() << "   | ";
-            }
-        
-            cout << '\n';
-        
-            Tuple tuple({});
-        
-            while (seq_scan_executor->getNext(&tuple)) {
-                tuple.print();
-            }
-        
-            seq_scan_executor->close();
-        
-            cout << "=============================\n";
-        
-            break;
-        }
-
-
-        case PlanType::PROJECTION: {
-        
-            Projection* projection_executor = dynamic_cast<Projection*>(factory.createExecutor(plan));
-
-            projection_executor->open();
-        
-            cout << "\n========== output ==========\n";
-        
-            for (auto& col : projection_executor->get_output_schema()) {
-                cout << col.getColName() << "   | ";
-            }
-        
-            cout << '\n';
-        
-            Tuple tuple({});
-        
-            while (projection_executor->getNext(&tuple)) {
-                tuple.print();
-            }
-        
-            projection_executor->close();
-        
-            cout << "=============================\n";
-        
-            break;
-        }
-
-
-        case PlanType::FILTER: {
-        
-            Select* filter_executor = dynamic_cast<Select*>(factory.createExecutor(plan));
-        
-            filter_executor->open();
-        
-            cout << "\n========== output ==========\n";
-        
-            for (auto& col : filter_executor->get_output_schema()) {
-                cout << col.getColName() << "   | ";
-            }
-        
-            cout << '\n';
-        
-            Tuple tuple({});
-        
-            while (filter_executor->getNext(&tuple)) {
-                tuple.print();
-            }
-        
-            filter_executor->close();
-        
-            cout << "=============================\n";
-        
-            break;
-        }
-        
-            default:
-                cout << "Unsupported plan type.\n";
-                break;
-        }
-
-
-        if(stmt->type() != hsql::kStmtTransaction){
-                if(stmt->type() == hsql::kStmtInsert || stmt->type() == hsql::kStmtUpdate || stmt->type() == hsql::kStmtDelete){
-            
-                    curr_txn = txn_manager->get_current_transaction();
-                    int txn_id = curr_txn->GetTransactionId();
-                    txn_manager->commit(curr_txn);
-                    WALRecord record{LogType::COMMIT,txn_id, -1, RID(-1, -1), Tuple({}), Tuple({})};
-                    wal_manager->add_record(record);
-                }
-            
-        }
-
-
-    }
-
-        catch (const exception& e) {
-
-        cout << "\nExecution Error: "
-             << e.what()
-             << endl;
-    }
-
-
-
-}
-
-    std::ofstream ofs;
-    ofs.open("wal.bin", std::ofstream::out | std::ofstream::trunc);
-    ofs.close();
-
-    catalog->~Catalog();
-    catalog_BPM->~BufferPoolManager();
-    DB_BPM->~BufferPoolManager();
-
-}
