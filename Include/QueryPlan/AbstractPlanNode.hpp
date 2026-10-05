@@ -7,6 +7,7 @@
 #include"Binder/BoundUpdateStatement.h"
 #include"Binder/BoundDeleteStatement.h"
 #include"Binder/BoundCreateTableStatement.h"
+#include"Binder/BoundDropTableStatement.h"
 #include"Binder/BoundCreateIndexStatement.h"
 
 
@@ -26,6 +27,7 @@ enum class PlanType {
     UPDATE,
     DELETE,
     CREATE_TABLE,
+    DROP_TABLE,
     CREATE_INDEX
 
 };

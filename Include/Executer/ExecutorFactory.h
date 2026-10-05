@@ -21,6 +21,7 @@
 #include"Q_Execution/update_statement_executer.h"
 #include"Q_Execution/delete_statement_executer.h"
 #include"Q_Execution/create_table_executer.h"
+#include"Q_Execution/drop_table_executer.h"
 #include"TransactionManager/Transaction_manager.h"
 #include"../../parser/external/sql-parser/src/sql/SQLStatement.h"
 #include"Recovery/WAL_manager.h"

@@ -339,6 +339,29 @@ void CreateTablePlan::PrintTree(int ident) const {
 }
 
 
+
+DropTablePlan::DropTablePlan(unique_ptr<BoundDropTableStatement> statement):bound_drop_table(move(statement)){
+    type = PlanType::DROP_TABLE;
+}
+
+BoundDropTableStatement* DropTablePlan::getBoundDropTable() const{
+    return bound_drop_table.get();
+}
+
+//just printing
+void DropTablePlan::PrintTree(int ident) const {
+
+        cout << "|-- DropTablePlan"
+             << endl;
+
+        if (bound_drop_table != nullptr) {
+
+            bound_drop_table->PrintTree();
+        }
+}
+
+
+
 CreateIndexPlan::CreateIndexPlan(unique_ptr<BoundCreateIndexStatement> statement):bound_create_index(move(statement)){
     type = PlanType::CREATE_INDEX;
 }

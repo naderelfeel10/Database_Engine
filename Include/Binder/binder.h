@@ -20,7 +20,7 @@
 #include"Binder/BoundDeleteStatement.h"
 #include"Binder/BoundCreateTableStatement.h"
 #include"Binder/BoundCreateIndexStatement.h"
-
+#include"Binder/BoundDropTableStatement.h"
 
 using namespace std;
 
@@ -46,6 +46,8 @@ public:
     BoundCreateTableStatement* bindCreateTable(const hsql::CreateStatement* statement);
     BoundCreateIndexStatement* bindCreateIndex(const hsql::CreateStatement* statement);
     
+    BoundDropTableStatement* bindDropTable(const hsql::DropStatement* statement);
+
     FieldType convertColumnType(const hsql::ColumnType& type);
 
     

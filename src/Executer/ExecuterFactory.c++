@@ -1,6 +1,7 @@
 #include"Executer/ExecutorFactory.h"
 #include<iostream>
 #include <fstream>
+#include <filesystem>
 #include <string>
 using namespace std;
 
@@ -387,7 +388,14 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             //return just null for now
             return create_table_executer;
         }
-        
+
+        case PlanType::DROP_TABLE:{
+            DropTablePlan* drop_table_plan = static_cast<DropTablePlan*>(plan);
+            AbstractExecuter* drop_table_executer = new DropTable(catalog, *drop_table_plan->getBoundDropTable());
+            
+            return drop_table_executer;
+        }
+
         case PlanType::CREATE_INDEX:{
 
             CreateIndexPlan* create_index_plan = static_cast<CreateIndexPlan*>(plan);
@@ -978,7 +986,7 @@ void setup_database(){
             catalog_BPM->~BufferPoolManager();
             DB_BPM->~BufferPoolManager();
     }
-    
+
     //create file for catalog
     catalog_dm = new DiskManager(database_name+"_catalog.bin");
     catalog_BPM = new BufferPoolManager(catalog_dm);
@@ -1001,6 +1009,46 @@ void setup_database(){
     
     factory = new ExecutorFactory(txn_manager, catalog, context, wal_manager);
     curr_txn = txn_manager->get_current_transaction();
+}
+
+bool deleteDatabase(const string& databaseName) {
+
+    ifstream input("databases.txt");
+    ofstream temp("databases.tmp");
+
+    if(!input.is_open()||!temp.is_open()){
+        return false;
+    }
+
+    string line;
+    bool deleted{false};
+
+    while(getline(input, line)){
+        //skip this line 
+        if(line == databaseName){
+            deleted = true;
+            continue;
+        }
+        temp<<line<<'\n';
+    }
+
+    input.close();
+    temp.close();
+
+    remove("databases.txt");
+    rename("databases.tmp", "databases.txt");
+
+    //remove the db_files from the system : 
+    if(filesystem::remove(database_name)) {
+        cout<<"file deleted successfully\n";
+    }
+    else{
+        cout<<"file does not exist\n";
+    }
+
+    //update db name
+    database_name = "NULL";
+    return deleted;
 }
 
 int main()
@@ -1039,6 +1087,21 @@ while (true) {
     ss>>command>>object>>databaseName;    
 
     cout<<command<<object<<databaseName<<endl;
+
+    //drop database 
+    if(command == "drop" && object =="database"){
+        
+        bool deleted =  deleteDatabase(databaseName);
+        
+        if(deleted){
+            cout<<databaseName + " is dropped successfuly"<<endl;
+        }
+        else{
+            cout<<databaseName + " not found!"<<endl;
+        }
+
+        continue;
+    }
 
     if(command == "connect"){
         
@@ -1222,6 +1285,11 @@ while (true) {
 
             case PlanType::CREATE_TABLE: {
                 CreateTable* create_executor = dynamic_cast<CreateTable*>(factory->createExecutor(plan));
+                catalog->printCatalog();
+                break;
+            }
+            case PlanType::DROP_TABLE: {
+                DropTable* drop_executor = dynamic_cast<DropTable*>(factory->createExecutor(plan));
                 catalog->printCatalog();
                 break;
             }

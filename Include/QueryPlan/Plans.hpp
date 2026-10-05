@@ -173,6 +173,22 @@ public:
 };
 
 
+
+class DropTablePlan : public AbstractPlanNode{
+
+private:
+    unique_ptr<BoundDropTableStatement> bound_drop_table;
+
+public:
+    DropTablePlan(unique_ptr<BoundDropTableStatement> statement);
+
+    BoundDropTableStatement* getBoundDropTable() const;
+    //just printing
+    void PrintTree(int ident) const override;
+};
+
+
+
 class CreateIndexPlan : public AbstractPlanNode{
 
 private:

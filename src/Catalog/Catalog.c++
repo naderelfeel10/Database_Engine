@@ -238,6 +238,9 @@ void Catalog::DropTable(string table_name){
     //delete from teh catalog
     tables.erase(table_name);
 
+    int table_id = info->table_id;
+    tables_ids_map.erase(table_id);
+
 }
 
 TableInfo* Catalog::GetTable(string table_name){

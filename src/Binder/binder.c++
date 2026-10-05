@@ -43,6 +43,10 @@ unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
             auto* create_statement = static_cast<const hsql::CreateStatement*>(statement);
             return unique_ptr<BoundStatement>(bindCreate(create_statement));
         }
+        case hsql::kStmtDrop:{
+            auto* drop_statement = static_cast<const hsql::DropStatement*>(statement);
+            return unique_ptr<BoundStatement>(bindDropTable(drop_statement));
+        }
         /*
         default:
             throw BinderException(
@@ -1123,6 +1127,16 @@ BoundCreateTableStatement*Binder::bindCreateTable(const hsql::CreateStatement* s
     }
 
     catalog->CreateTable(*bound);
+
+    return bound;
+}
+
+BoundDropTableStatement* Binder::bindDropTable(const hsql::DropStatement* statement){
+    
+    string table_name = statement->name;
+    cout<<table_name<<endl;
+
+    BoundDropTableStatement* bound = new BoundDropTableStatement(table_name);
 
     return bound;
 }
