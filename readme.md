@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" width="600">
+</p>
+
 # Database Engine
 
 A production-oriented, disk-based relational database engine built from scratch in modern C++. The project implements the core architecture of a real-world DBMS, including SQL parsing, semantic analysis, query planning, Volcano-style execution, storage management, indexing, transaction processing, and crash recovery.
