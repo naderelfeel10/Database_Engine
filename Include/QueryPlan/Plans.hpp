@@ -47,6 +47,20 @@ public:
     void PrintTree(int indent = 0)const override ;
 };
 
+//limit plan 
+class LimitPlan :public AbstractPlanNode{
+
+public:
+
+    BoundExpression* limit;
+    BoundExpression* offset;
+    AbstractPlanNode* child;
+    
+    LimitPlan(BoundExpression* limit, BoundExpression* offset, AbstractPlanNode* child);
+    //printing
+    void PrintTree(int indent = 0)const override ;
+};
+
 
 //join plan, it has join type, condtion, left and right childs
 class JoinPlan : public AbstractPlanNode{

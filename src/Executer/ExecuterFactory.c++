@@ -100,6 +100,23 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             return new Projection(child, projection_cols);
         }
 
+        case PlanType::LIMIT:{
+            auto* limit_plan = static_cast<LimitPlan*>(plan);
+
+            AbstractExecuter* child = createExecutor(limit_plan->child);
+            BoundExpression* limit = limit_plan->limit;
+            BoundExpression* offset = limit_plan->offset;
+
+            Column* limit_col = expr_to_col(limit, child);
+            
+            Column* offset_col;
+            if(offset != nullptr){
+                offset_col = expr_to_col(offset, child);
+            }
+
+            cout<<"calling limit executer"<<endl;
+            return new Limit(child, limit_col, offset_col);
+        }
 
         //select case
         case PlanType::FILTER:{

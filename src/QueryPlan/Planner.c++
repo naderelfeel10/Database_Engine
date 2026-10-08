@@ -80,6 +80,11 @@ AbstractPlanNode* Planner::PlanSelect(BoundSelectStatement* statement){
         plan = new OrderByPlan(statement->order_by[0], plan);
     }
 
+    //limit/ offset
+    if(statement->limit || statement->offset){
+        plan = new LimitPlan(statement->limit, statement->offset, plan);
+    }
+    
     //then the projection to choose needed cols from the row
     plan = new ProjectionPlan(statement->select_list, plan);
 

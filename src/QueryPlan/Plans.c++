@@ -35,7 +35,8 @@ void FilterPlan::PrintTree(int indent)const {
 
 
     
-ProjectionPlan::ProjectionPlan(const vector<BoundSelectItem>& expressions, AbstractPlanNode* child):expressions(expressions),child(child){
+ProjectionPlan::ProjectionPlan(const vector<BoundSelectItem>& expressions, AbstractPlanNode* child):
+                        expressions(expressions),child(child){
     type = PlanType::PROJECTION;
 }
 
@@ -51,6 +52,23 @@ void ProjectionPlan::PrintTree(int indent )const  {
         }
 }
 
+
+LimitPlan::LimitPlan(BoundExpression* limit, BoundExpression* offset, AbstractPlanNode* child):
+                    limit(limit),offset(offset),child(child){
+    type = PlanType::LIMIT;
+}
+
+//printing
+void LimitPlan::PrintTree(int indent )const  {
+
+        PrintIndent(indent);
+
+        cout << "LIMIT";
+        cout << endl;
+        if (child != nullptr) {
+            child->PrintTree(indent + 1);
+        }
+}
 
 
 JoinPlan::JoinPlan(JoinType join_type, BoundExpression* condition, AbstractPlanNode* left, AbstractPlanNode* right){

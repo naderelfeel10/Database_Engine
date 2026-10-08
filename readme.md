@@ -58,36 +58,44 @@ The goal of this project is to explore and implement the internal mechanisms beh
 ## ✨ Features
 
 ### SQL Support
-- ✅ **SELECT** with column projection
-- ✅ **WHERE** clauses with complex predicates (AND, OR, comparison operators)
-- ✅ **JOIN** (INNER, LEFT, RIGHT) with multiple join algorithms
-- ✅ **GROUP BY** with multiple columns
-- ✅ **HAVING** clauses for aggregate filtering
-- ✅ **ORDER BY** (ASC / DESC) with external merge sort
-- ✅ **CREATE INDEX** builds an index on the col (B+ Tree, Hash) 
-- ✅ **CREATE TABLE**: create table with schema and constraints 
-- ✅ **CREATE DATABASE**: create new db file on HD
+- **SELECT** with column projection
+- **WHERE** clauses with complex predicates (AND, OR, comparison operators)
+- **JOIN** (INNER, LEFT, RIGHT) with multiple join algorithms
+- **GROUP BY** with multiple columns
+- **HAVING** clauses for aggregate filtering
+- **ORDER BY** (ASC / DESC) with external merge sort
+- **INSERT INTO**: insert row into a table 
+- **UPDATE**: update a row or more in a table   
+- **DELETE FROM**: delete a row or more from a table   
+- **CREATE INDEX** builds an index on the col (B+ Tree, Hash)
+- **DROP INDEX** drops the index build on a col
+- **CREATE TABLE**: create table with schema and constraints 
+- **DROP TABLE**: drop table from the db 
+- **CREATE DATABASE**: create new db file on HD
+- **DROP DATABASE**: drop/remove the whole db
+- **CONNECT DATABASE**: connect to one of systems db
+
 
 ### Query Execution
-- ✅ **Volcano-style iterator model** — composable, streaming operators
-- ✅ **Multiple join algorithms**: Nested Loop, Indexed NLJ, Hash Join, Merge Join
-- ✅ **Hash & Sort-based aggregation**
-- ✅ **External merge sort** for datasets larger than memory
-- ✅ **Index-accelerated lookups** — Static Hash (O(1)) + B+ Tree (O(log n))
+- **Volcano-style iterator model** — composable, streaming operators
+- **Multiple join algorithms**: Nested Loop, Indexed NLJ, Hash Join, Merge Join
+- **Hash & Sort-based aggregation**
+- **External merge sort** for datasets larger than memory
+- **Index-accelerated lookups** — Static Hash (O(1)) + B+ Tree (O(log n))
 
 ### Transaction Support & ACID Guarantees
-- ✅ **Transaction Manager** — BEGIN, COMMIT, ABORT lifecycle management
-- ✅ **Write-Ahead Logging (WAL)** — durability via persistent operation log
-- ✅ **Crash Recovery** — redo committed transactions, undo uncommitted ones
-- ✅ **Serializable Isolation Level** — transactions execute sequentially
-- ✅ **Full ACID Compliance** — all changes durable before COMMIT returns
+- **Transaction Manager** — BEGIN, COMMIT, ABORT lifecycle management
+- **Write-Ahead Logging (WAL)** — durability via persistent operation log
+- **Crash Recovery** — redo committed transactions, undo uncommitted ones
+- **Serializable Isolation Level** — transactions execute sequentially
+- **Full ACID Compliance** — all changes durable before COMMIT returns
 
 ### Storage & Persistence
-- ✅ **Disk-backed persistence** — 4KB slotted pages
-- ✅ **Buffer Pool Manager** with LRU eviction
-- ✅ **Full crash recovery** — tables and indexes rebuilt from disk on restart
-- ✅ **Hash and B+ Tree indexing** with auto-persistence
-- ✅ **Write-Ahead Log recovery** — automatic redo/undo on system restart
+- **Disk-backed persistence** — 4KB slotted pages
+- **Buffer Pool Manager** with LRU eviction
+- **Full crash recovery** — tables and indexes rebuilt from disk on restart
+- **Hash and B+ Tree indexing** with auto-persistence
+- **Write-Ahead Log recovery** — automatic redo/undo on system restart
 
 ---
 
@@ -142,85 +150,98 @@ The goal of this project is to explore and implement the internal mechanisms beh
 ## 📐 Project Structure
 
 ```
-src/
-├── Binder/
-│   ├── Binder.h / Binder.c++
-│   ├── BoundStatement.h
-│   ├── BoundExpression.h
-│   ├── BoundSelectStatement.h
-│   ├── BindContext.h
-│   └── BoundSelectItem.h
-│
-├── Catalog/
-│   ├── Catalog.h / Catalog.c++
-│   └── catalog.db
-│
-├── QueryPlan/
-│   ├── AbstractPlanNode.hpp
-│   ├── PlanNodes.hpp
-│   ├── Planner.h / Planner.c++
-│   └── PlanType.h
-│
-├── Q_Execution/
-│   ├── ExecutorFactory.h / ExecutorFactory.c++
-│   ├── AbstractExecuter.h
-│   ├── Operators/
-│   │   ├── seq_scan_operator.c++
-│   │   ├── select_operator.c++
-│   │   ├── Projection_operator.c++
-│   │   ├── Nested_loop_join.c++
-│   │   ├── IndexedNested_loop_join.c++
-│   │   ├── hash_join.c++
-│   │   ├── MergeJoinExecuter.c++
-│   │   ├── HashAggregateExecuter.c++
-│   │   ├── SortAggregateExecuter.c++
-│   │   ├── ExternalMergeSortExecuter.c++
-│   │   ├── AbstractPredicate.h
-│   │   ├── Predicate.c++
-│   │   └── ComplexPredicate.c++
-│   └── Column.h
-│
-├── Recovery/
-│   ├── WAL_record.h
-│   ├── WAL.h / WAL.c++
-│   ├── WAL_recovery.h / WAL_recovery.c++
-│   └── wal.log
+Database_Engine/
 |
-├── TransactionManager/
-│   ├── Transaction.h
-│   ├── TransactionManager.h / TransactionManager.c++
+├── Include(header files)/
 |
-├── Buffer/
-│   ├── BufferPoolManager.c++
-│   └── LRU_replacement.c++
-│
-├── Storage/
-│   ├── Disk/
-│   │   └── DiskManager.c++
-│   ├── Page/
-│   │   ├── Field.c++
-│   │   ├── page.c++
-│   │   └── Tuple.c++
-│   ├── Table/
-│   │   ├── TableHeap.c++
-│   │   ├── TableIterator.c++
-│   │   ├── Column.c++
-│   │   └── RID.c++
-│   └── Indexing/
-│       ├── static_hash_index.c++
-│       ├── StaticHashIndexWrapper.c++
-│       ├── BPlusTreeIndex.c++
-│       └── BPlusTreeIndexWrapper.c++
-│
-├── parser/
-│   └── external/sql-parser/
-│
-└── test/
-    ├── test_multiple_tables.c++
-    ├── test_loading_DB.c++
-    ├── test_table_load_store.c++
-    ├── test_end_to_end_queries.c++
-    └── test_transactions_recovery.c++
+├── parser(external-component)/
+|
+└── src/
+    |
+    ├── Binder/
+    │   ├── BindContext.c++
+    │   ├── binder.c++
+    │   ├── BoundCreateIndexStatement.c++
+    │   ├── BoundCreateTableStatement.c++
+    │   ├── BoundDeleteStatement.c++
+    │   ├── BoundDropTableStatement.c++
+    │   ├── BoundExpression.c++
+    │   ├── BoundInsertStatement.c++
+    │   ├── BoundSelectStatement.c++
+    │   ├── BoundUpdateStatement.c++
+    │   └── Expression.c++
+    |
+    ├── Buffer/
+    │   ├── BufferPoolManager.c++
+    │   └── LRU_replacement.c++
+    |
+    ├── Catalog/
+    │   └── Catalog.c++
+    |
+    ├── Executer/
+    │   ├── ExecuterFactory.c++
+    |
+    ├── Q_Execution/
+    │   ├── ComplexPredicate.c++
+    │   ├── create_index_operator.c++
+    │   ├── create_table_executer.c++
+    │   ├── delete_statement_executer.c++
+    │   ├── drop_table_executer.c++
+    │   ├── ExternalMergeSortExecuter.c++
+    │   ├── hash_join.c++
+    │   ├── HashAggregateExecuter.c++
+    │   ├── IndexedNested_loop_join.c++
+    │   ├── insert_statement_executer.c++
+    │   ├── MergeJoinExecuter.c++
+    │   ├── Nested_loop_join.c++
+    │   ├── Predicate.c++
+    │   ├── Projection_operator.c++
+    │   ├── select_operator.c++
+    │   ├── seq_scan_operator.c++
+    │   ├── SortAggregateExecuter.c++
+    │   └── update_statement_executer.c++
+    |
+    ├── QueryPlan/
+    │   ├── Planner.c++
+    │   └── Plans.c++
+    |
+    ├── Recovery/
+    │   ├── WAL_manager.c++
+    │   ├── WAL_record.c++
+    │   └── WAL_recovery.c++
+    |
+    ├── Storage/
+    │   ├── Disk/
+    │   │   └── DiskManager.c++
+    |   |
+    │   ├── Indexing/
+    │   │   ├── BPlusTreeIndex.c++
+    │   │   ├── BPlusTreeIndexWrapper.c++
+    │   │   ├── static_hash_index.c++
+    │   │   └── StaticHashIndexWrapper.c++
+    |   |
+    │   ├── Page/
+    │   │   ├── catalog.db
+    │   │   ├── Field.c++
+    │   │   ├── page.c++
+    │   │   └── Tuple.c++
+    |   |
+    │   └── Table/
+    │       ├── Column.c++
+    │       ├── RID.c++
+    │       ├── TableHeap.c++
+    │       └── TableIterator.c++
+    |
+    ├── TransactionManager/
+    │   ├── Transaction_manager.c++
+    │   └── Transaction.c++
+    |
+    └── test/
+        ├── test_loading_DB.c++
+        ├── test_multiple_tables.c++
+        ├── test_table_load_store.c++
+        └── testTable_iterator.c++
+
 ```
 
 ---
