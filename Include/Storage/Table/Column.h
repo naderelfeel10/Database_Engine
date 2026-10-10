@@ -13,7 +13,7 @@ class Column{
         FieldType field_type;
         std::string col_name;
         int col_max_size;
-        bool is_null{false};
+        bool is_nullable{true};
 
     public:
 
@@ -27,7 +27,9 @@ class Column{
         void setColName(string col_name){this->col_name=col_name;}
 
         Field* getField();
-
+        FieldType get_field_type(){
+            return field_type;
+        }
         void serializeCol(char* data);
         void deSerializeCol(char* data);
 
@@ -35,9 +37,10 @@ class Column{
 
         int getColSize();
         FieldType getColType(){return this->field_type;}
-        void setNull(bool value){
-            this->is_null = value;
+        void set_is_nullable(bool value){
+            this->is_nullable = value;
         }
+        bool get_is_nullable(){return this->is_nullable;}
         void printCol();
 
 };

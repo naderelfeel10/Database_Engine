@@ -99,6 +99,13 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
 
     //loop through each expr in select list, resolve it's expression, then add it to bound list
     for(auto&expr : *statement->selectList){
+
+        //handle select star : 
+        if(expr->type == hsql::kExprStar){
+            handleSelectStar(bound);
+            continue;
+        }
+
         BoundSelectItem item;
         //resolve the expression binder
         item.expression = BindExpression(expr);
@@ -162,7 +169,6 @@ BoundExpression* Binder::BindExpression(hsql::Expr* expression){
 
         case hsql::kExprFunctionRef:
             return BindFunction(expression);
-
         default:
 
             throw std::runtime_error(
@@ -171,6 +177,31 @@ BoundExpression* Binder::BindExpression(hsql::Expr* expression){
     }
 }
 
+void Binder::handleSelectStar(BoundSelectStatement* bound){
+
+    //fetch table info from table_name
+    //use table schema to construct the select list 
+
+    string table_name = bound->from_table.table_name;
+
+    TableInfo* table_info = catalog->GetTable(table_name);
+    vector<Column>schema = table_info->schema;
+    
+    //for each col, get it's bounded format, then push to the select list 
+    for(auto& col: schema){
+        
+        string col_name = col.getColName();
+        BoundColumnRef* ref =  context->ResolveColumn(table_name, col_name);
+        
+        BoundSelectItem item;
+        
+        item.expression = ref;
+        item.alias = "";
+
+        bound->select_list.push_back(item);
+    }
+
+}
 
 BoundExpression* Binder::BindColumnRef(const hsql::Expr* expression){
     //chech if null expression
@@ -694,7 +725,7 @@ BoundInsertStatement* Binder::BindInsert(const hsql::InsertStatement* statement)
             }
         }
         
-        if(found){
+        if(found == true){
             //push to cols
             target_cols.push_back(col);
             //push to values
@@ -703,19 +734,32 @@ BoundInsertStatement* Binder::BindInsert(const hsql::InsertStatement* statement)
 
             values.push_back(bound_expr);
         }else{
-            Column null_col = Column(TYPE_NULL,col.getColName(), col.getColSize());
-            target_cols.push_back(null_col);
-            //push nullptr into values
-            values.push_back(nullptr);
+            //if the col could be null, then just insert it as null
+            //else, a run time error should be thrown to the user 
+            if(col.get_is_nullable() == true){
+                
+                FieldType f_type = col.get_field_type();
+                
+                Field* f = new Field(f_type);
+                f->set_null(true);
+                
+                Column null_field_col = Column(f,col.getColName(), col.getColSize());
+                
+                target_cols.push_back(null_field_col);
+                values.push_back(nullptr);
+            }else{
+                throw runtime_error(col.getColName() + "can't be null");
+            }
         }
     }
 
-    for(auto&col:target_cols)col.printCol();
+    /*for(auto&col:target_cols)col.printCol();
     for(auto&expr:values){
         if(expr)
             expr->PrintTree();
     }
     bound_table->printTable();
+    */
 
 
     //binding values
@@ -983,10 +1027,10 @@ BoundCreateTableStatement*Binder::bindCreateTable(const hsql::CreateStatement* s
         Column column(field_type, column_name,column_size);
 
         //initial field values
-        if(!column_def->nullable){
-            column.setNull(false);
+        if(column_def->nullable == false){
+            column.set_is_nullable(false);
         }else{
-            column.setNull(true);
+            column.set_is_nullable(true);
         }
 
         //push to the bound

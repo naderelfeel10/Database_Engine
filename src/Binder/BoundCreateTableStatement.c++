@@ -42,4 +42,9 @@ void BoundCreateTableStatement::PrintTree() const {
             cout << endl;
         }
     }
+
+    for(auto col : columns){
+        col.printCol();
+        cout<<col.get_is_nullable()<<endl;
+    }
 }

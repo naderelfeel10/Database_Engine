@@ -56,6 +56,8 @@ public:
     //expression types thaat i need to bind
     BoundExpression* BindColumnRef(const hsql::Expr* expression);
 
+    void handleSelectStar(BoundSelectStatement* bound);
+    
     BoundExpression* BindIntegerLiteral(hsql::Expr* expression);
     BoundExpression* BindFloatLiteral(hsql::Expr* expression);
     BoundExpression* BindStringLiteral(hsql::Expr* expression);

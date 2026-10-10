@@ -166,12 +166,16 @@ void Field::print() {
 void Field::print() {
     const int VAL_WIDTH = 15;
     
+    if(is_null == true){
+        cout << left << setw(VAL_WIDTH) << "NULL";
+        cout << " | ";
+        return;
+    }
     switch (fieldType) {
         case TYPE_INT:   std::cout << std::left << std::setw(VAL_WIDTH) << VALUE_INT;   break;
         case TYPE_FLOAT: std::cout << std::left << std::setw(VAL_WIDTH) << VALUE_FLOAT; break;
         case TYPE_BOOL:  std::cout << std::left << std::setw(VAL_WIDTH) << (VALUE_BOOL ? "true" : "false"); break;
         case TYPE_STRING: std::cout << std::left << std::setw(VAL_WIDTH) << (VALUE_STRING ? VALUE_STRING : "[EMPTY]"); break;
-        case TYPE_NULL: std::cout << std::left << std::setw(VAL_WIDTH) << "NULL"; break;
         default:         std::cout << std::left << std::setw(VAL_WIDTH) << "??"; break;
     }
     std::cout << " | ";

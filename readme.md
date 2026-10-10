@@ -10,6 +10,65 @@ The engine provides a complete pipeline from SQL statements to persistent data s
 
 The goal of this project is to explore and implement the internal mechanisms behind database systems such as PostgreSQL and MySQL, focusing on how modern relational database engines process queries, manage memory and disk, maintain consistency, and recover from failures.
 
+
+## 🏗️ Engine Architecture
+
+```mermaid
+flowchart TD
+    SQL["SQL Query"]
+
+    subgraph DB["DB Engine"]
+        direction TB
+
+        subgraph CP["Query Compilation"]
+            direction LR
+            Parser["Parser"]
+            Analyzer["Analyzer"]
+            Planner["Planner"]
+
+            Parser -->|AST| Analyzer
+            Analyzer --> Planner
+        end
+
+        Catalog[("Catalog")]
+        Optimizer["Query Optimizer"]
+        Executor["Execution Engine"]
+        Storage["Storage Manager"]
+        Recovery["Recovery Manager"]
+        Transaction["Transaction Manager"]
+
+        Analyzer <--> Catalog
+        Planner -->|Basic Plan| Optimizer
+        Optimizer -->|Optimized Plan| Executor
+
+        Executor -->|Fetch data| Storage
+        Executor -->|Write logs| Recovery
+        Transaction <--> Executor
+        Transaction <--> Recovery
+    end
+
+    Disk[("Data Files<br/>Hard Disk")]
+    Results["Query Results"]
+
+    SQL -->|SQL String| Parser
+
+    Storage <--> Disk
+    Recovery <--> Disk
+
+    Executor --> Results
+
+    classDef query fill:#263747,stroke:#60a5fa,color:#fff
+    classDef compile fill:#263747,stroke:#60a5fa,color:#fff
+    classDef execution fill:#244b3a,stroke:#4ade80,color:#fff
+    classDef storage fill:#49351d,stroke:#fbbf24,color:#fff
+    classDef output fill:#263747,stroke:#60a5fa,color:#fff
+
+    class SQL,Parser,Analyzer,Planner,Optimizer query
+    class Executor,Transaction execution
+    class Storage,Recovery,Disk,Catalog storage
+    class Results output
+```
+
 ---
 
 ## 🏗️ Architecture
@@ -57,13 +116,15 @@ The goal of this project is to explore and implement the internal mechanisms beh
 
 ## ✨ Features
 
-### SQL Support
+### SQL Support (end-to-end)
 - **SELECT** with column projection
 - **WHERE** clauses with complex predicates (AND, OR, comparison operators)
 - **JOIN** (INNER, LEFT, RIGHT) with multiple join algorithms
 - **GROUP BY** with multiple columns
+- **AGG FUNCs**: SUM(), COUNT(), AVG(), MAX(), MIN() 
 - **HAVING** clauses for aggregate filtering
 - **ORDER BY** (ASC / DESC) with external merge sort
+- **LIMIT&OFFSET** return limited num of rows from certain offset;
 - **INSERT INTO**: insert row into a table 
 - **UPDATE**: update a row or more in a table   
 - **DELETE FROM**: delete a row or more from a table   
@@ -74,7 +135,9 @@ The goal of this project is to explore and implement the internal mechanisms beh
 - **CREATE DATABASE**: create new db file on HD
 - **DROP DATABASE**: drop/remove the whole db
 - **CONNECT DATABASE**: connect to one of systems db
-
+- **BEGIN TRANSACTIONS** : starts a transaction and groups subsequent queries together.
+- **COMMIT TRANSACTIONS** : saves all changes made in the transaction.
+- **ROLLBACK TRANSACTIONS** : undoes all changes made in the transaction.
 
 ### Query Execution
 - **Volcano-style iterator model** — composable, streaming operators
